@@ -12,7 +12,7 @@
 
 class SkColorFilter;
 
-class SkColorFilterImageFilter : public SkSingleInputImageFilter {
+class SK_API SkColorFilterImageFilter : public SkSingleInputImageFilter {
 public:
     SkColorFilterImageFilter(SkColorFilter* cf, SkImageFilter* input = NULL);
     virtual ~SkColorFilterImageFilter();
@@ -25,6 +25,8 @@ protected:
 
     virtual bool onFilterImage(Proxy*, const SkBitmap& src, const SkMatrix&,
                                SkBitmap* result, SkIPoint* loc) SK_OVERRIDE;
+
+    virtual SkColorFilter* asColorFilter() const SK_OVERRIDE;
 
 private:
     SkColorFilter*  fColorFilter;
