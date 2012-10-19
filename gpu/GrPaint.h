@@ -10,7 +10,6 @@
 #ifndef GrPaint_DEFINED
 #define GrPaint_DEFINED
 
-#include "GrTexture.h"
 #include "GrColor.h"
 #include "GrSamplerState.h"
 
@@ -26,8 +25,7 @@
  * The primitive color computation starts with the color specified by setColor(). This color is the
  * input to the first color stage. Each color stage feeds its output to the next color stage. The
  * final color stage's output color is input to the color filter specified by
- * setXfermodeColorFilter which it turn feeds into the color matrix. The output of the color matrix
- * is the final source color, S.
+ * setXfermodeColorFilter which produces the final source color, S.
  *
  * Fractional pixel coverage follows a similar flow. The coverage is initially the value specified
  * by setCoverage(). This is input to the first coverage stage. Coverage stages are chained
@@ -41,7 +39,7 @@
  * Note that the coverage is applied after the blend. This is why they are computed as distinct
  * values.
  *
- * TODO: Encapsulate setXfermodeColorFilter and color matrix in stages and remove from GrPaint.
+ * TODO: Encapsulate setXfermodeColorFilter in a GrCustomStage and remove from GrPaint.
  */
 class GrPaint {
 public:
@@ -105,28 +103,11 @@ public:
     GrColor getColorFilterColor() const { return fColorFilterColor; }
 
     /**
-     * Turns off application of a color matrix. By default the color matrix is disabled.
-     */
-    void disableColorMatrix() { fColorMatrixEnabled = false; }
-
-    /**
-     * Specifies and enables a 4 x 5 color matrix.
-     */
-    void setColorMatrix(const float matrix[20]) {
-        fColorMatrixEnabled = true;
-        memcpy(fColorMatrix, matrix, sizeof(fColorMatrix));
-    }
-
-    bool isColorMatrixEnabled() const { return fColorMatrixEnabled; }
-    const float* getColorMatrix() const { return fColorMatrix; }
-
-    /**
-     * Disables both the matrix and SkXfermode::Mode color filters.
+     * Disables the SkXfermode::Mode color filter.
      */
     void resetColorFilter() {
         fColorFilterXfermode = SkXfermode::kDst_Mode;
         fColorFilterColor = GrColorPackRGBA(0xff, 0xff, 0xff, 0xff);
-        fColorMatrixEnabled = false;
     }
 
     /**
@@ -189,47 +170,49 @@ public:
     bool hasStage() const { return this->hasColorStage() || this->hasCoverageStage(); }
 
     /**
-     * Preconcats the matrix of all enabled stages with the inverse of a matrix. If the matrix
-     * inverse cannot be computed (and there is at least one enabled stage) then false is returned.
+     * Called when the source coord system is changing. preConcatInverse is the inverse of the
+     * transformation from the old coord system to the new coord system. Returns false if the matrix
+     * cannot be inverted.
      */
-    bool preConcatSamplerMatricesWithInverse(const GrMatrix& matrix) {
+    bool sourceCoordChangeByInverse(const GrMatrix& preConcatInverse) {
         GrMatrix inv;
         bool computed = false;
         for (int i = 0; i < kMaxColorStages; ++i) {
             if (this->isColorStageEnabled(i)) {
-                if (!computed && !matrix.invert(&inv)) {
+                if (!computed && !preConcatInverse.invert(&inv)) {
                     return false;
                 } else {
                     computed = true;
                 }
-                fColorSamplers[i].preConcatMatrix(inv);
+                fColorSamplers[i].preConcatCoordChange(inv);
             }
         }
         for (int i = 0; i < kMaxCoverageStages; ++i) {
             if (this->isCoverageStageEnabled(i)) {
-                if (!computed && !matrix.invert(&inv)) {
+                if (!computed && !preConcatInverse.invert(&inv)) {
                     return false;
                 } else {
                     computed = true;
                 }
-                fCoverageSamplers[i].preConcatMatrix(inv);
+                fCoverageSamplers[i].preConcatCoordChange(inv);
             }
         }
         return true;
     }
 
     /**
-     * Preconcats the matrix of all stages with a matrix.
+     * Called when the source coord system is changing. preConcat gives the transformation from the
+     * old coord system to the new coord system.
      */
-    void preConcatSamplerMatrices(const GrMatrix& matrix) {
+    void sourceCoordChange(const GrMatrix& preConcat) {
         for (int i = 0; i < kMaxColorStages; ++i) {
             if (this->isColorStageEnabled(i)) {
-                fColorSamplers[i].preConcatMatrix(matrix);
+                fColorSamplers[i].preConcatCoordChange(preConcat);
             }
         }
         for (int i = 0; i < kMaxCoverageStages; ++i) {
             if (this->isCoverageStageEnabled(i)) {
-                fCoverageSamplers[i].preConcatMatrix(matrix);
+                fCoverageSamplers[i].preConcatCoordChange(preConcat);
             }
         }
     }
@@ -245,10 +228,6 @@ public:
 
         fColorFilterColor = paint.fColorFilterColor;
         fColorFilterXfermode = paint.fColorFilterXfermode;
-        fColorMatrixEnabled = paint.fColorMatrixEnabled;
-        if (fColorMatrixEnabled) {
-            memcpy(fColorMatrix, paint.fColorMatrix, sizeof(fColorMatrix));
-        }
 
         for (int i = 0; i < kMaxColorStages; ++i) {
             if (paint.isColorStageEnabled(i)) {
@@ -294,14 +273,12 @@ private:
     GrBlendCoeff                fDstBlendCoeff;
     bool                        fAntiAlias;
     bool                        fDither;
-    bool                        fColorMatrixEnabled;
 
     GrColor                     fColor;
     uint8_t                     fCoverage;
 
     GrColor                     fColorFilterColor;
     SkXfermode::Mode            fColorFilterXfermode;
-    float                       fColorMatrix[20];
 
     void resetBlend() {
         fSrcBlendCoeff = kOne_GrBlendCoeff;
