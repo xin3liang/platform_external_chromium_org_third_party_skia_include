@@ -5,13 +5,13 @@
  * found in the LICENSE file.
  */
 
-#ifndef GrCustomStage_DEFINED
-#define GrCustomStage_DEFINED
+#ifndef GrEffect_DEFINED
+#define GrEffect_DEFINED
 
 #include "GrRefCnt.h"
 #include "GrNoncopyable.h"
 #include "GrProgramStageFactory.h"
-#include "GrCustomStageUnitTest.h"
+#include "GrEffectUnitTest.h"
 #include "GrTextureAccess.h"
 
 class GrContext;
@@ -22,21 +22,21 @@ class SkString;
     particular stage of the Ganesh shading pipeline.
     Subclasses must have a function that produces a human-readable name:
         static const char* Name();
-    GrCustomStage objects *must* be immutable: after being constructed,
+    GrEffect objects *must* be immutable: after being constructed,
     their fields may not change.  (Immutability isn't actually required
     until they've been used in a draw call, but supporting that would require
     setters and getters that could fail, copy-on-write, or deep copying of these
     objects when they're stored by a GrGLProgramStage.)
   */
-class GrCustomStage : public GrRefCnt {
+class GrEffect : public GrRefCnt {
 
 public:
-    SK_DECLARE_INST_COUNT(GrCustomStage)
+    SK_DECLARE_INST_COUNT(GrEffect)
 
     typedef GrProgramStageFactory::StageKey StageKey;
 
-    explicit GrCustomStage(int numTextures);
-    virtual ~GrCustomStage();
+    explicit GrEffect(int numTextures);
+    virtual ~GrEffect();
 
     /** If given an input texture that is/is not opaque, is this
         stage guaranteed to produce an opaque output? */
@@ -45,23 +45,23 @@ public:
     /** This object, besides creating back-end-specific helper
         objects, is used for run-time-type-identification. The factory should be
         an instance of templated class, GrTProgramStageFactory. It is templated
-        on the subclass of GrCustomStage. The subclass must have a nested type
+        on the subclass of GrEffect. The subclass must have a nested type
         (or typedef) named GLProgramStage which will be the subclass of
         GrGLProgramStage created by the factory.
 
         Example:
-        class MyCustomStage : public GrCustomStage {
+        class MyCustomEffect : public GrEffect {
         ...
             virtual const GrProgramStageFactory& getFactory() const
                                                             SK_OVERRIDE {
-                return GrTProgramStageFactory<MyCustomStage>::getInstance();
+                return GrTProgramStageFactory<MyCustomEffect>::getInstance();
             }
         ...
         };
      */
     virtual const GrProgramStageFactory& getFactory() const = 0;
 
-    /** Returns true if the other custom stage will generate identical output.
+    /** Returns true if the other effect will generate identical output.
         Must only be called if the two are already known to be of the
         same type (i.e.  they return the same value from getFactory()).
 
@@ -75,7 +75,7 @@ public:
         the two stages have the same return value for numTextures() and
         for texture() over all valid indicse.
      */
-    virtual bool isEqual(const GrCustomStage&) const;
+    virtual bool isEqual(const GrEffect&) const;
 
     /** Human-meaningful string to identify this effect; may be embedded
         in generated shader code. */
