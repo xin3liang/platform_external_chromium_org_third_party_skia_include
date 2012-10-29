@@ -10,7 +10,7 @@
 
 #include "GrRefCnt.h"
 #include "GrNoncopyable.h"
-#include "GrProgramStageFactory.h"
+#include "GrBackendEffectFactory.h"
 #include "GrEffectUnitTest.h"
 #include "GrTextureAccess.h"
 
@@ -26,40 +26,38 @@ class SkString;
     their fields may not change.  (Immutability isn't actually required
     until they've been used in a draw call, but supporting that would require
     setters and getters that could fail, copy-on-write, or deep copying of these
-    objects when they're stored by a GrGLProgramStage.)
+    objects when they're stored by a GrGLEffect.)
   */
 class GrEffect : public GrRefCnt {
 
 public:
     SK_DECLARE_INST_COUNT(GrEffect)
 
-    typedef GrProgramStageFactory::StageKey StageKey;
+    typedef GrBackendEffectFactory::EffectKey EffectKey;
 
     explicit GrEffect(int numTextures);
     virtual ~GrEffect();
 
     /** If given an input texture that is/is not opaque, is this
-        stage guaranteed to produce an opaque output? */
+        effect guaranteed to produce an opaque output? */
     virtual bool isOpaque(bool inputTextureIsOpaque) const;
 
-    /** This object, besides creating back-end-specific helper
-        objects, is used for run-time-type-identification. The factory should be
-        an instance of templated class, GrTProgramStageFactory. It is templated
-        on the subclass of GrEffect. The subclass must have a nested type
-        (or typedef) named GLProgramStage which will be the subclass of
-        GrGLProgramStage created by the factory.
+    /** This object, besides creating back-end-specific helper objects, is used for run-time-type-
+        identification. The factory should be an instance of templated class,
+        GrTBackendEffectFactory. It is templated on the subclass of GrEffect. The subclass must have
+        a nested type (or typedef) named GLEffect which will be the subclass of GrGLEffect created
+        by the factory.
 
         Example:
         class MyCustomEffect : public GrEffect {
         ...
-            virtual const GrProgramStageFactory& getFactory() const
-                                                            SK_OVERRIDE {
-                return GrTProgramStageFactory<MyCustomEffect>::getInstance();
+            virtual const GrBackendEffectFactory& getFactory() const SK_OVERRIDE {
+                return GrTBackendEffectFactory<MyCustomEffect>::getInstance();
             }
         ...
         };
      */
-    virtual const GrProgramStageFactory& getFactory() const = 0;
+    virtual const GrBackendEffectFactory& getFactory() const = 0;
 
     /** Returns true if the other effect will generate identical output.
         Must only be called if the two are already known to be of the
@@ -68,12 +66,12 @@ public:
         Equality is not the same thing as equivalence.
         To test for equivalence (that they will generate the same
         shader code, but may have different uniforms), check equality
-        of the stageKey produced by the GrProgramStageFactory:
-        a.getFactory().glStageKey(a) == b.getFactory().glStageKey(b).
+        of the EffectKey produced by the GrBackendEffectFactory:
+        a.getFactory().glEffectKey(a) == b.getFactory().glEffectKey(b).
 
         The default implementation of this function returns true iff
         the two stages have the same return value for numTextures() and
-        for texture() over all valid indicse.
+        for texture() over all valid indices.
      */
     virtual bool isEqual(const GrEffect&) const;
 
