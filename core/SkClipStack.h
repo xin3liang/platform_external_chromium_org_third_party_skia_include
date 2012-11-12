@@ -103,7 +103,7 @@ public:
 
     /**
      * The generation ID has three reserved values to indicate special
-     * (potentially ignoreable) cases
+     * (potentially ignorable) cases
      */
     static const int32_t kInvalidGenID = 0;
     static const int32_t kEmptyGenID = 1;       // no pixels writeable
@@ -134,6 +134,15 @@ public:
                      fDoAA(false) {}
             friend bool operator==(const Clip& a, const Clip& b);
             friend bool operator!=(const Clip& a, const Clip& b);
+            /**
+             * Gets the bounds of the clip element, either the rect or path bounds.
+             */
+            const SkRect& getBounds() const;
+            /** 
+             * Returns true if the clip element is a path that is inverse filled
+             */
+            bool isInverseFilled() const;
+
             const SkRect*   fRect;  // if non-null, this is a rect clip
             const SkPath*   fPath;  // if non-null, this is a path clip
             SkRegion::Op    fOp;
@@ -154,11 +163,25 @@ public:
         const Clip* prev();
 
         /**
+         * This is a variant of next() that greedily attempts to combine elements when possible.
+         * Currently it attempts to combine intersecting rectangles, though it may do more in the
+         * future. The returned Clip may not refer to a single element in the stack, so its
+         * generation ID may be invalid.
+         */
+        const Clip* nextCombined();
+
+        /**
          * Moves the iterator to the topmost clip with the specified RegionOp
          * and returns that clip. If no clip with that op is found,
          * returns NULL.
          */
         const Clip* skipToTopmost(SkRegion::Op op);
+
+        /**
+         * Moves forward to the next clip element that uses op. If no clip with that op is found,
+         * returns NULL.
+         */
+        const Clip* skipToNext(SkRegion::Op op);
 
         /**
          * Restarts the iterator on a clip stack.
@@ -169,7 +192,7 @@ public:
         const SkClipStack* fStack;
         Clip               fClip;
         SkDeque::Iter      fIter;
-
+        SkRect             fCombinedRect; // used for nextCombined()
         /**
          * updateClip updates fClip to the current state of fIter. It unifies
          * functionality needed by both next() and prev().
