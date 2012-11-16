@@ -29,7 +29,7 @@
         return x;
     }
     static const SkMScalar SK_MScalarPI = 3.141592653589793;
-#else
+#elif defined SK_MSCALAR_IS_FLOAT
     typedef float SkMScalar;
     static inline float SkFloatToMScalar(float x) {
         return x;
@@ -46,19 +46,8 @@
     static const SkMScalar SK_MScalarPI = 3.14159265f;
 #endif
 
-#ifdef SK_SCALAR_IS_FLOAT
-    #define SkMScalarToScalar SkMScalarToFloat
-    #define SkScalarToMScalar SkFloatToMScalar
-#else
-    #if SK_MSCALAR_IS_DOUBLE
-        // we don't have fixed <-> double macros, use double<->scalar macros
-        #define SkMScalarToScalar SkDoubleToScalar
-        #define SkScalarToMScalar SkScalarToDouble
-    #else
-        #define SkMScalarToScalar SkFloatToFixed
-        #define SkScalarToMScalar SkFixedToFloat
-    #endif
-#endif
+#define SkMScalarToScalar SkMScalarToFloat
+#define SkScalarToMScalar SkFloatToMScalar
 
 static const SkMScalar SK_MScalar1 = 1;
 
@@ -130,6 +119,13 @@ public:
     SkMScalar get(int row, int col) const;
     void set(int row, int col, const SkMScalar& value);
 
+    double getDouble(int row, int col) const {
+        return SkMScalarToDouble(this->get(row, col));
+    }
+    void setDouble(int row, int col, double value) {
+        this->set(row, col, SkDoubleToMScalar(value));
+    }
+
     void asColMajorf(float[]) const;
     void asColMajord(double[]) const;
     void asRowMajorf(float[]) const;
@@ -194,12 +190,35 @@ public:
      */
     bool invert(SkMatrix44* inverse) const;
 
+    /** Transpose this matrix in place. */
+    void transpose();
+
     /** Apply the matrix to the src vector, returning the new vector in dst.
         It is legal for src and dst to point to the same memory.
      */
-    void map(const SkScalar src[4], SkScalar dst[4]) const;
+    void mapScalars(const SkScalar src[4], SkScalar dst[4]) const;
+    void mapScalars(SkScalar vec[4]) const {
+        this->mapScalars(vec, vec);
+    }
+
+    // DEPRECATED: call mapScalars()
+    void map(const SkScalar src[4], SkScalar dst[4]) const {
+        this->mapScalars(src, dst);
+    }
+    // DEPRECATED: call mapScalars()
     void map(SkScalar vec[4]) const {
-        this->map(vec, vec);
+        this->mapScalars(vec, vec);
+    }
+
+#ifdef SK_MSCALAR_IS_DOUBLE
+    void mapMScalars(const SkMScalar src[4], SkMScalar dst[4]) const;
+#elif defined SK_MSCALAR_IS_FLOAT
+    void mapMScalars(const SkMScalar src[4], SkMScalar dst[4]) const {
+        this->mapScalars(src, dst);
+    }
+#endif
+    void mapMScalars(SkMScalar vec[4]) const {
+        this->mapMScalars(vec, vec);
     }
 
     friend SkVector4 operator*(const SkMatrix44& m, const SkVector4& src) {
@@ -210,6 +229,8 @@ public:
 
     void dump() const;
 
+    double determinant() const;
+
 private:
     /*  Stored in the same order as opengl:
          [3][0] = tx
@@ -217,8 +238,6 @@ private:
          [3][2] = tz
      */
     SkMScalar fMat[4][4];
-
-    double determinant() const;
 };
 
 #endif
