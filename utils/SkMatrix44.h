@@ -309,6 +309,17 @@ public:
         return dst;
     }
 
+    /**
+     *  map an array of [x, y, 0, 1] through the matrix, returning an array
+     *  of [x', y', z', w'].
+     *
+     *  @param src2     array of [x, y] pairs, with implied z=0 and w=1
+     *  @param count    number of [x, y] pairs in src2
+     *  @param dst4     array of [x', y', z', w'] quads as the output.
+     */
+    void map2(const float src2[], int count, float dst4[]) const;
+    void map2(const double src2[], int count, double dst4[]) const;
+
     void dump() const;
 
     double determinant() const;
