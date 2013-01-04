@@ -485,7 +485,7 @@ public:
      * Initialize the cache ID to a domain and key.
      */
     GrCacheID(Domain domain, const Key& key) {
-        GrAssert(kInvalid_Domain != domain); 
+        GrAssert(kInvalid_Domain != domain);
         this->reset(domain, key);
     }
 
@@ -499,7 +499,7 @@ public:
 
     const Key& getKey() const { GrAssert(this->isValid()); return fKey; }
     Domain getDomain() const { GrAssert(this->isValid()); return fDomain; }
-    
+
     /** Creates a new unique ID domain. */
     static Domain GenerateDomain();
 
@@ -663,8 +663,5 @@ typedef GrBackendTextureDesc GrPlatformTextureDesc;
 typedef GrBackendRenderTargetDesc GrPlatformRenderTargetDesc;
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// this is included only to make it easy to use this debugging facility
-#include "GrInstanceCounter.h"
 
 #endif
