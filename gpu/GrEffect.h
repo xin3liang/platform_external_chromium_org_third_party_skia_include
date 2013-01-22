@@ -17,19 +17,52 @@
 
 class GrBackendEffectFactory;
 class GrContext;
+class GrEffect;
 class SkString;
+
+/**
+ * A Wrapper class for GrEffect. Its ref-count will track owners that may use effects to enqueue
+ * new draw operations separately from ownership within a deferred drawing queue. When the
+ * GrEffectRef ref count reaches zero the scratch GrResources owned by the effect can be recycled
+ * in service of later draws. However, the deferred draw queue may still own direct references to
+ * the underlying GrEffect.
+ */
+class GrEffectRef : public SkRefCnt {
+public:
+    SK_DECLARE_INST_COUNT(GrEffectRef);
+
+    GrEffect* get() { return fEffect; }
+    const GrEffect* get() const { return fEffect; }
+
+    void* operator new(size_t size);
+    void operator delete(void* target);
+
+private:
+    friend class GrEffect; // to construct these
+
+    explicit GrEffectRef(GrEffect* effect);
+
+    virtual ~GrEffectRef();
+
+    GrEffect* fEffect;
+
+    typedef SkRefCnt INHERITED;
+};
 
 /** Provides custom vertex shader, fragment shader, uniform data for a particular stage of the
     Ganesh shading pipeline.
     Subclasses must have a function that produces a human-readable name:
         static const char* Name();
     GrEffect objects *must* be immutable: after being constructed, their fields may not change.
+
+    GrEffect subclass objects should be created by factory functions that return GrEffectRef.
+    There is no public way to wrap a GrEffect in a GrEffectRef. Thus, a factory should be a static
+    member function of a GrEffect subclass.
   */
 class GrEffect : public GrRefCnt {
 public:
     SK_DECLARE_INST_COUNT(GrEffect)
 
-    GrEffect() {};
     virtual ~GrEffect();
 
     /**
@@ -71,21 +104,30 @@ public:
      */
     virtual const GrBackendEffectFactory& getFactory() const = 0;
 
-    /** Returns true if the other effect will generate identical output.
-        Must only be called if the two are already known to be of the
-        same type (i.e.  they return the same value from getFactory()).
+    /** Returns true if this and other effect conservatively draw identically. It can only return
+        true when the two effects are of the same subclass (i.e. they return the same object from
+        from getFactory()).
 
-        Equality is not the same thing as equivalence.
-        To test for equivalence (that they will generate the same
-        shader code, but may have different uniforms), check equality
-        of the EffectKey produced by the GrBackendEffectFactory:
-        a.getFactory().glEffectKey(a) == b.getFactory().glEffectKey(b).
-
-        The default implementation of this function returns true iff
-        the two stages have the same return value for numTextures() and
-        for texture() over all valid indices.
+        A return value of true from isEqual() should not be used to test whether the effects would
+        generate the same shader code. To test for identical code generation use the EffectKey
+        computed by the GrBackendEffectFactory:
+            effectA.getFactory().glEffectKey(effectA) == effectB.getFactory().glEffectKey(effectB).
      */
-    virtual bool isEqual(const GrEffect&) const;
+    bool isEqual(const GrEffect& other) const {
+        if (&this->getFactory() != &other.getFactory()) {
+            return false;
+        }
+        bool result = this->onIsEqual(other);
+#if GR_DEBUG
+        if (result) {
+            GrAssert(this->numTextures() == other.numTextures());
+            for (int i = 0; i < this->numTextures(); ++i) {
+                GrAssert(*fTextureAccesses[i] == *other.fTextureAccesses[i]);
+            }
+        }
+#endif
+        return result;
+    }
 
     /** Human-meaningful string to identify this effect; may be embedded
         in generated shader code. */
@@ -120,9 +162,42 @@ protected:
      */
     void addTextureAccess(const GrTextureAccess* textureAccess);
 
+    GrEffect() : fEffectRef(NULL) {};
+
+    /** This should be called by GrEffect subclass factories */
+    static GrEffectRef* CreateEffectRef(GrEffect* effect) {
+        if (NULL == effect->fEffectRef) {
+            effect->fEffectRef = SkNEW_ARGS(GrEffectRef, (effect));
+        } else {
+            effect->fEffectRef->ref();
+            GrCrash("This function should only be called once per effect currently.");
+        }
+        return effect->fEffectRef;
+    }
+
 private:
-    SkSTArray<4, const GrTextureAccess*, true> fTextureAccesses;
+
+    /** Subclass implements this to support isEqual(). It will only be called if it is known that
+        the two effects are of the same subclass (i.e. they return the same object
+        from getFactory()).*/
+    virtual bool onIsEqual(const GrEffect& other) const = 0;
+
+    void EffectRefDestroyed() {
+        fEffectRef = NULL;
+    }
+
+    friend class GrEffectRef; // to call GrEffectRef destroyed
+
+    SkSTArray<4, const GrTextureAccess*, true>  fTextureAccesses;
+    GrEffectRef*                                fEffectRef;
+
     typedef GrRefCnt INHERITED;
 };
+
+inline GrEffectRef::GrEffectRef(GrEffect* effect) {
+    GrAssert(NULL != effect);
+    effect->ref();
+    fEffect = effect;
+}
 
 #endif
