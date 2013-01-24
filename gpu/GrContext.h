@@ -442,15 +442,12 @@ public:
      * Draws an oval.
      *
      * @param paint         describes how to color pixels.
-     * @param rect          the bounding rect of the oval.
-     * @param strokeWidth   if strokeWidth < 0, then the oval is filled, else
-     *                      the rect is stroked based on strokeWidth. If
-     *                      strokeWidth == 0, then the stroke is always a single
-     *                      pixel thick.
+     * @param oval          the bounding rect of the oval.
+     * @param stroke        the stroke information (width, style)
      */
     void drawOval(const GrPaint& paint,
-                  const GrRect& rect,
-                  SkScalar strokeWidth);
+                  const GrRect& oval,
+                  const SkStrokeRec& stroke);
 
     ///////////////////////////////////////////////////////////////////////////
     // Misc.
@@ -620,22 +617,6 @@ public:
                              bool canClobberSrc,
                              const SkRect& rect,
                              float sigmaX, float sigmaY);
-
-    /**
-     * Zooms a subset of the texture to a larger size with a nice edge.
-     * The inner rectangle is a simple scaling of the texture by a factor of
-     * |zoom|.  The outer |inset| pixels transition from the background texture
-     * to the zoomed coordinate system at a rate of
-     * (distance_to_edge / inset) ^2, producing a rounded lens effect.
-     * @param srcTexture      The source texture to be zoomed.
-     * @param dstRect         The destination rectangle.
-     * @param srcRect         The source rectangle.  Must be smaller than
-     *                        dstRect
-     * @param inset           Number of pixels to blend along the edges.
-     * @return the zoomed texture, which is dstTexture.
-     */
-     GrTexture* zoom(GrTexture* srcTexture,
-                     const SkRect& dstRect, const SkRect& srcRect, float inset);
 
     ///////////////////////////////////////////////////////////////////////////
     // Helpers
@@ -909,6 +890,9 @@ private:
     GrDrawTarget* prepareToDraw(const GrPaint*, BufferedDraw);
 
     void internalDrawPath(const GrPaint& paint, const SkPath& path, const SkStrokeRec& stroke);
+
+    void internalDrawOval(const GrPaint& paint, const GrRect& oval, const SkStrokeRec& stroke);
+    bool canDrawOval(const GrPaint& paint, const GrRect& oval, const SkStrokeRec& stroke) const;
 
     GrTexture* createResizedTexture(const GrTextureDesc& desc,
                                     const GrCacheID& cacheID,
