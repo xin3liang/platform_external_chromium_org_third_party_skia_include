@@ -120,19 +120,7 @@ public:
             effectA.getFactory().glEffectKey(effectA) == effectB.getFactory().glEffectKey(effectB).
      */
     bool isEqual(const GrEffectRef& other) const {
-        if (&this->getFactory() != &other->getFactory()) {
-            return false;
-        }
-        bool result = this->onIsEqual(*other.get());
-#if GR_DEBUG
-        if (result) {
-            GrAssert(this->numTextures() == other->numTextures());
-            for (int i = 0; i < this->numTextures(); ++i) {
-                GrAssert(*fTextureAccesses[i] == *other->fTextureAccesses[i]);
-            }
-        }
-#endif
-        return result;
+        return this->isEqual(*other.get());
     }
 
     /** Human-meaningful string to identify this effect; may be embedded
@@ -160,10 +148,23 @@ public:
     void* operator new(size_t size);
     void operator delete(void* target);
 
-    /** These use non-standard names because GrEffects should only be ref'ed an unref'ed deep in
-        the bowels. Rendering code should use GrEffectRef. */
-    void addRef() { this->ref(); }
-    void subRef() { this->unref(); }
+    /** These functions are used when recording effects into a deferred drawing queue. The inc call
+        keeps the effect alive outside of GrEffectRef while allowing any resources owned by the
+        effect to be returned to the cache for reuse. The dec call must balance the inc call. */
+    void incDeferredRefCounts() const {
+        this->ref();
+        int count = fTextureAccesses.count();
+        for (int t = 0; t < count; ++t) {
+            fTextureAccesses[t]->getTexture()->incDeferredRefCount();
+        }
+    }
+    void decDeferredRefCounts() const {
+        int count = fTextureAccesses.count();
+        for (int t = 0; t < count; ++t) {
+            fTextureAccesses[t]->getTexture()->decDeferredRefCount();
+        }
+        this->unref();
+    }
 
 protected:
     /**
@@ -182,9 +183,12 @@ protected:
             effect->fEffectRef = SkNEW_ARGS(GrEffectRef, (effect));
         } else {
             effect->fEffectRef->ref();
-            GrCrash("This function should only be called once per effect currently.");
         }
         return effect->fEffectRef;
+    }
+
+    static const GrEffectRef* CreateEffectRef(const GrEffect* effect) {
+        return CreateEffectRef(const_cast<GrEffect*>(effect));
     }
 
     /** Helper used in subclass factory functions to unref the effect after it has been wrapped in a
@@ -200,7 +204,7 @@ protected:
     class AutoEffectUnref {
     public:
         AutoEffectUnref(GrEffect* effect) : fEffect(effect) { }
-        ~AutoEffectUnref() { fEffect->subRef(); }
+        ~AutoEffectUnref() { fEffect->unref(); }
         operator GrEffect*() { return fEffect; }
     private:
         GrEffect* fEffect;
@@ -214,6 +218,21 @@ protected:
     }
 
 private:
+    bool isEqual(const GrEffect& other) const {
+        if (&this->getFactory() != &other.getFactory()) {
+            return false;
+        }
+        bool result = this->onIsEqual(other);
+#if GR_DEBUG
+        if (result) {
+            GrAssert(this->numTextures() == other.numTextures());
+            for (int i = 0; i < this->numTextures(); ++i) {
+                GrAssert(*fTextureAccesses[i] == *other.fTextureAccesses[i]);
+            }
+        }
+#endif
+        return result;
+    }
 
     /** Subclass implements this to support isEqual(). It will only be called if it is known that
         the two effects are of the same subclass (i.e. they return the same object from
@@ -222,7 +241,10 @@ private:
 
     void EffectRefDestroyed() { fEffectRef = NULL; }
 
-    friend class GrEffectRef; // to call GrEffectRef destroyed
+    friend class GrEffectRef;   // to call EffectRefDestroyed()
+    friend class GrEffectStage; // to rewrap GrEffect in GrEffectRef when restoring an effect-stage
+                                // from deferred state, to call isEqual on naked GrEffects, and
+                                // to inc/dec deferred ref counts.
 
     SkSTArray<4, const GrTextureAccess*, true>  fTextureAccesses;
     GrEffectRef*                                fEffectRef;
