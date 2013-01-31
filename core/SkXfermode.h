@@ -103,7 +103,8 @@ public:
         // all remaining modes are defined in the SVG Compositing standard
         // http://www.w3.org/TR/2009/WD-SVGCompositing-20090430/
         kPlus_Mode,
-        kMultiply_Mode,
+        kModulate_Mode, // multiplies all components (= alpha and color)
+        kMultiply_Mode = kModulate_Mode,
 
         // all above modes can be expressed as pair of src/dst Coeffs
         kCoeffModesCnt,
