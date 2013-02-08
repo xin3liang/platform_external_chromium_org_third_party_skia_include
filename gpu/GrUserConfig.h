@@ -22,24 +22,6 @@
 #endif
 
 /*
- * To diagnose texture cache performance, define this to 1 if you want to see
- * a log statement everytime we upload an image to create a texture.
- */
-//#define GR_DUMP_TEXTURE_UPLOAD    1
-
-/*
- * This causes the GrContext to execute all draws immediately in the 3D API
- * rather than internally queuing draws.
- */
-//#define GR_DISABLE_DRAW_BUFFERING 1
-
-/*
- * This causes more aggressive shader optimization. May hurt performance if
- * switching shaders is expensive.
- */
-//#define GR_AGGRESSIVE_SHADER_OPTS 1
-
-/*
  * This gives a threshold in bytes of when to lock a GrGeometryBuffer vs using
  * updateData. (Note the depending on the underlying 3D API the update functions
  * may always be implemented using a lock)
@@ -51,12 +33,5 @@
  * in vram. The value is only a default and can be overridden at runtime.
  */
 //#define GR_DEFAULT_TEXTURE_CACHE_MB_LIMIT 96
-
-///////////////////////////////////////////////////////////////////////////////
-// Decide Ganesh types
-
-#define GR_TEXT_SCALAR_IS_USHORT    0
-#define GR_TEXT_SCALAR_IS_FIXED     0
-#define GR_TEXT_SCALAR_IS_FLOAT     1
 
 #endif
