@@ -17,7 +17,7 @@
  *  Provides SkFontHost clients with access to fontconfig services. They will
  *  access the global instance found in RefGlobal().
  */
-class SkFontConfigInterface : public SkRefCnt {
+class SK_API SkFontConfigInterface : public SkRefCnt {
 public:
     /**
      *  Returns the global SkFontConfigInterface instance, and if it is not
@@ -66,6 +66,12 @@ public:
      *  calling stream->unref() when it is done accessing the data.
      */
     virtual SkStream* openStream(const FontIdentity&) = 0;
+
+    /**
+     *  Return a singleton instance of a direct subclass that calls into
+     *  libfontconfig. This does not affect the refcnt of the returned instance.
+     */
+    static SkFontConfigInterface* GetSingletonDirectInterface();
 };
 
 #endif
