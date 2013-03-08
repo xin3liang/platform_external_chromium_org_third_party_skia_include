@@ -12,6 +12,8 @@
 
 #include "SkScalar.h"
 
+#include <stdarg.h>
+
 /*  Some helper functions for C strings
 */
 
@@ -185,6 +187,7 @@ public:
 
     void printf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
     void appendf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
+    void appendf(const char format[], va_list);
     void prependf(const char format[], ...) SK_PRINTF_LIKE(2, 3);
 
     void remove(size_t offset, size_t length);
