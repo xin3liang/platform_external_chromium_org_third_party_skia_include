@@ -251,12 +251,6 @@ public:
      */
     int getMaxTextureSize() const;
 
-    /**
-     * Return the max width or height of a render target supported by the
-     * current GPU.
-     */
-    int getMaxRenderTargetSize() const;
-
     ///////////////////////////////////////////////////////////////////////////
     // Render targets
 
@@ -279,6 +273,18 @@ public:
      * Can the provided configuration act as a color render target?
      */
     bool isConfigRenderable(GrPixelConfig config) const;
+
+    /**
+     * Return the max width or height of a render target supported by the
+     * current GPU.
+     */
+    int getMaxRenderTargetSize() const;
+
+    /**
+     * Returns the max sample count for a render target. It will be 0 if MSAA
+     * is not supported.
+     */
+    int getMaxSampleCount() const;
 
     ///////////////////////////////////////////////////////////////////////////
     // Backend Surfaces
@@ -888,7 +894,8 @@ private:
     void internalDrawPath(const GrPaint& paint, const SkPath& path, const SkStrokeRec& stroke);
 
     void internalDrawOval(const GrPaint& paint, const GrRect& oval, const SkStrokeRec& stroke);
-    bool canDrawOval(const GrPaint& paint, const GrRect& oval, const SkStrokeRec& stroke) const;
+    void internalDrawCircle(const GrPaint& paint, const GrRect& circle, const SkStrokeRec& stroke);
+    bool canDrawOval(const GrPaint& paint, const GrRect& oval, bool* isCircle) const;
 
     GrTexture* createResizedTexture(const GrTextureDesc& desc,
                                     const GrCacheID& cacheID,

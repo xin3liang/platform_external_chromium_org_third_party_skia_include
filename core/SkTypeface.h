@@ -194,6 +194,7 @@ public:
     int getUnitsPerEm() const;
 
     SkStream* openStream(int* ttcIndex) const;
+    SkScalerContext* createScalerContext(const SkDescriptor*) const;
 
 protected:
     /** uniqueID must be unique and non-zero
@@ -204,12 +205,13 @@ protected:
     friend class SkScalerContext;
     static SkTypeface* GetDefaultTypeface();
 
+    virtual SkScalerContext* onCreateScalerContext(const SkDescriptor*) const = 0;
+    virtual void onFilterRec(SkScalerContextRec*) const = 0;
+
     virtual int onGetUPEM() const;
     virtual int onGetTableTags(SkFontTableTag tags[]) const;
     virtual size_t onGetTableData(SkFontTableTag, size_t offset,
                                   size_t length, void* data) const;
-    virtual SkScalerContext* onCreateScalerContext(const SkDescriptor*) const;
-    virtual void onFilterRec(SkScalerContextRec*) const;
     virtual void onGetFontDescriptor(SkFontDescriptor*) const;
 
 private:
@@ -218,6 +220,7 @@ private:
     bool        fIsFixedWidth;
 
     friend class SkPaint;
+    friend class SkGlyphCache;  // GetDefaultTypeface
     // just so deprecated fonthost can call protected methods
     friend class SkFontHost;
 
