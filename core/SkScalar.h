@@ -39,6 +39,9 @@
     /** SK_ScalarInfinity is defined to be infinity as an SkScalar
     */
     #define SK_ScalarInfinity       SK_FloatInfinity
+    /** SK_ScalarNegativeInfinity is defined to be negative infinity as an SkScalar
+    */
+    #define SK_ScalarNegativeInfinity       SK_FloatNegativeInfinity
     /** SK_ScalarMax is defined to be the largest value representable as an SkScalar
     */
     #define SK_ScalarMax            (3.402823466e+38f)
@@ -129,6 +132,7 @@
     #define SkScalarFloorToInt(x)       sk_float_floor2int(x)
     #define SkScalarCeilToInt(x)        sk_float_ceil2int(x)
     #define SkScalarRoundToInt(x)       sk_float_round2int(x)
+    #define SkScalarTruncToInt(x)       static_cast<int>(x)
 
     /** Returns the absolute value of the specified SkScalar
     */
@@ -220,7 +224,8 @@
 
     #define SK_Scalar1              SK_Fixed1
     #define SK_ScalarHalf           SK_FixedHalf
-    #define SK_ScalarInfinity   SK_FixedMax
+    #define SK_ScalarInfinity           SK_FixedMax
+    #define SK_ScalarNegativeInfinity   SK_FixedMin
     #define SK_ScalarMax            SK_FixedMax
     #define SK_ScalarMin            SK_FixedMin
     #define SK_ScalarNaN            SK_FixedNaN
@@ -244,6 +249,7 @@
     #define SkScalarFloorToInt(x)       SkFixedFloorToInt(x)
     #define SkScalarCeilToInt(x)        SkFixedCeilToInt(x)
     #define SkScalarRoundToInt(x)       SkFixedRoundToInt(x)
+    #define SkScalarTruncToInt(x)       (((x) < 0) ? SkScalarCeilToInt(x) : SkScalarFloorToInt(x))
 
     #define SkScalarAbs(x)          SkFixedAbs(x)
     #define SkScalarCopySign(x, y)  SkCopySign32(x, y)

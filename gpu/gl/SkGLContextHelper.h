@@ -1,27 +1,27 @@
 
 /*
- * Copyright 2011 Google Inc.
+ * Copyright 2013 Google Inc.
  *
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  */
-#ifndef SkGLContext_DEFINED
-#define SkGLContext_DEFINED
+#ifndef SkGLContextHelper_DEFINED
+#define SkGLContextHelper_DEFINED
 
+#include "GrGLExtensions.h"
 #include "GrGLInterface.h"
-#include "SkString.h"
 
 /**
  * Create an offscreen opengl context with an RGBA8 / 8bit stencil FBO.
  * Provides a GrGLInterface struct of function pointers for the context.
  */
 
-class SkGLContext : public SkRefCnt {
+class SkGLContextHelper : public SkRefCnt {
 public:
-    SK_DECLARE_INST_COUNT(SkGLContext)
+    SK_DECLARE_INST_COUNT(SkGLContextHelper)
 
-    SkGLContext();
-    virtual ~SkGLContext();
+    SkGLContextHelper();
+    virtual ~SkGLContextHelper();
 
     /**
      * Initializes the context and makes it current.
@@ -34,7 +34,10 @@ public:
 
     virtual void makeCurrent() const = 0;
 
-    bool hasExtension(const char* extensionName) const;
+    bool hasExtension(const char* extensionName) const {
+        GrAssert(NULL != fGL);
+        return fExtensions.has(extensionName);
+    }
 
 protected:
     /**
@@ -51,7 +54,7 @@ protected:
     virtual void destroyGLContext() = 0;
 
 private:
-    SkString fExtensionString;
+    GrGLExtensions fExtensions;
     GrGLuint fFBO;
     GrGLuint fColorBufferID;
     GrGLuint fDepthStencilBufferID;
@@ -61,9 +64,14 @@ private:
 };
 
 /**
- * Helper macro for using the GL context through the GrGLInterface. Example:
+ * Helper macros for using the GL context through the GrGLInterface. Example:
  * SK_GL(glCtx, GenTextures(1, &texID));
  */
-#define SK_GL(ctx, X) (ctx).gl()->f ## X
+#define SK_GL(ctx, X) (ctx).gl()->f ## X;    \
+                      SkASSERT(GR_GL_NO_ERROR == (ctx).gl()->fGetError())
+#define SK_GL_RET(ctx, RET, X) (RET) = (ctx).gl()->f ## X;    \
+                  SkASSERT(GR_GL_NO_ERROR == (ctx).gl()->fGetError())
+#define SK_GL_NOERRCHECK(ctx, X) (ctx).gl()->f ## X
+#define SK_GL_RET_NOERRCHECK(ctx, RET, X) (RET) = (ctx).gl()->f ## X
 
 #endif

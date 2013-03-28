@@ -23,28 +23,29 @@
     of GrGLEffect.
  */
 
-class GrEffect;
-class GrEffectStage;
+class GrEffectRef;
 class GrGLEffect;
 class GrGLCaps;
+class GrDrawEffect;
 
 class GrBackendEffectFactory : public GrNoncopyable {
 public:
     typedef uint32_t EffectKey;
     enum {
         kNoEffectKey = 0,
-        kEffectKeyBits = 12,
+        kEffectKeyBits = 16,
         /**
          * Some aspects of the generated code may be determined by the particular textures that are
          * associated with the effect. These manipulations are performed by GrGLShaderBuilder beyond
          * GrGLEffects' control. So there is a dedicated part of the key which is combined
          * automatically with the bits produced by GrGLEffect::GenKey().
          */
-        kTextureKeyBits = 6
+        kTextureKeyBits = 6,
+        kAttribKeyBits = 6
     };
 
-    virtual EffectKey glEffectKey(const GrEffectStage&, const GrGLCaps&) const = 0;
-    virtual GrGLEffect* createGLInstance(const GrEffect&) const = 0;
+    virtual EffectKey glEffectKey(const GrDrawEffect&, const GrGLCaps&) const = 0;
+    virtual GrGLEffect* createGLInstance(const GrDrawEffect&) const = 0;
 
     bool operator ==(const GrBackendEffectFactory& b) const {
         return fEffectClassID == b.fEffectClassID;
@@ -63,6 +64,7 @@ protected:
     GrBackendEffectFactory() {
         fEffectClassID = kIllegalEffectClassID;
     }
+    virtual ~GrBackendEffectFactory() {}
 
     static EffectKey GenID() {
         GR_DEBUGCODE(static const int32_t kClassIDBits = 8 * sizeof(EffectKey) -
