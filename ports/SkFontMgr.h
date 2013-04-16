@@ -14,8 +14,9 @@
 class SkData;
 class SkStream;
 class SkString;
+class SkTypeface;
 
-class SkFontStyleSet : public SkRefCnt {
+class SK_API SkFontStyleSet : public SkRefCnt {
 public:
     virtual int count() = 0;
     virtual void getStyle(int index, SkFontStyle*, SkString* style) = 0;
@@ -25,7 +26,7 @@ public:
     static SkFontStyleSet* CreateEmpty();
 };
 
-class SkFontMgr : public SkRefCnt {
+class SK_API SkFontMgr : public SkRefCnt {
 public:
     int countFamilies();
     void getFamilyName(int index, SkString* familyName);
