@@ -16,9 +16,14 @@ class SkWStream;
 class SkImageEncoder {
 public:
     enum Type {
+        kUnknown_Type,
+        kBMP_Type,
+        kGIF_Type,
+        kICO_Type,
         kJPEG_Type,
         kPNG_Type,
-        kWEBP_Type
+        kWBMP_Type,
+        kWEBP_Type,
     };
     static SkImageEncoder* Create(Type);
 
@@ -79,6 +84,11 @@ protected:
 
 // All the encoders known by Skia. Note that, depending on the compiler settings,
 // not all of these will be available
+/** An ARGBImageEncoder will always write out
+ *  bitmap.width() * bitmap.height() * 4
+ *  bytes.
+ */
+DECLARE_ENCODER_CREATOR(ARGBImageEncoder);
 DECLARE_ENCODER_CREATOR(JPEGImageEncoder);
 DECLARE_ENCODER_CREATOR(PNGImageEncoder);
 DECLARE_ENCODER_CREATOR(WEBPImageEncoder);
