@@ -64,6 +64,11 @@ template <typename D, typename S> static D* SkTAddOffset(S* ptr, size_t byteOffs
     );
 }
 
+/** Returns true if the source value 's' will fit in the destination type 'D'. */
+template <typename D, typename S> inline bool SkTFitsIn(S s) {
+    return static_cast<D>(s) == s;
+}
+
 /** \class SkAutoTCallVProc
 
     Call a function when this goes out of scope. The template uses two
@@ -101,7 +106,7 @@ private:
 template <typename T> class SkAutoTDelete : SkNoncopyable {
 public:
     SkAutoTDelete(T* obj = NULL) : fObj(obj) {}
-    ~SkAutoTDelete() { delete fObj; }
+    ~SkAutoTDelete() { SkDELETE(fObj); }
 
     T* get() const { return fObj; }
     T& operator*() const { SkASSERT(fObj); return *fObj; }
@@ -109,7 +114,7 @@ public:
 
     void reset(T* obj) {
         if (fObj != obj) {
-            delete fObj;
+            SkDELETE(fObj);
             fObj = obj;
         }
     }
@@ -118,7 +123,7 @@ public:
      *  Delete the owned object, setting the internal pointer to NULL.
      */
     void free() {
-        delete fObj;
+        SkDELETE(fObj);
         fObj = NULL;
     }
 
@@ -182,7 +187,7 @@ public:
         SkASSERT(count >= 0);
         fArray = NULL;
         if (count) {
-            fArray = new T[count];
+            fArray = SkNEW_ARRAY(T, count);
         }
         SkDEBUGCODE(fCount = count;)
     }
@@ -190,17 +195,17 @@ public:
     /** Reallocates given a new count. Reallocation occurs even if new count equals old count.
      */
     void reset(int count) {
-        delete[] fArray;
+        SkDELETE_ARRAY(fArray);
         SkASSERT(count >= 0);
         fArray = NULL;
         if (count) {
-            fArray = new T[count];
+            fArray = SkNEW_ARRAY(T, count);
         }
         SkDEBUGCODE(fCount = count;)
     }
 
     ~SkAutoTArray() {
-        delete[] fArray;
+        SkDELETE_ARRAY(fArray);
     }
 
     /** Return the array of T elements. Will be NULL if count == 0
@@ -226,25 +231,30 @@ public:
     /** Allocate count number of T elements
      */
     SkAutoSTArray(size_t count) {
+        fCount = count;
         if (count > N) {
-            fArray = new T[count];
-        } else if (count) {
-            fArray = new (fStorage) T[count];
+            fArray = (T*) sk_malloc_throw(count * sizeof(T));
+        } else if (count > 0) {
+            fArray = (T*) fStorage;
         } else {
             fArray = NULL;
+            return;
         }
-        fCount = count;
+        T* iter = fArray;
+        T* stop = fArray + count;
+        while (iter < stop) {
+            SkNEW_PLACEMENT(iter++, T);
+        }
     }
 
     ~SkAutoSTArray() {
+        T* start = fArray;
+        T* iter = start + fCount;
+        while (iter > start) {
+            (--iter)->~T();
+        }
         if (fCount > N) {
-            delete[] fArray;
-        } else {
-            T* start = fArray;
-            T* iter = start + fCount;
-            while (iter > start) {
-                (--iter)->~T();
-            }
+            sk_free(fArray);
         }
     }
 
