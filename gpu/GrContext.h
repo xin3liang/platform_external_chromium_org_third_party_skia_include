@@ -836,7 +836,7 @@ public:
     GrGpu* getGpu() { return fGpu; }
     const GrGpu* getGpu() const { return fGpu; }
     GrFontCache* getFontCache() { return fFontCache; }
-    GrDrawTarget* getTextTarget(const GrPaint& paint);
+    GrDrawTarget* getTextTarget();
     const GrIndexBuffer* getQuadIndexBuffer() const;
 
     /**
@@ -903,9 +903,10 @@ private:
 
     void flushDrawBuffer();
 
+    class AutoRestoreEffects;
     /// Sets the paint and returns the target to draw into. The paint can be NULL in which case the
     /// draw state is left unmodified.
-    GrDrawTarget* prepareToDraw(const GrPaint*, BufferedDraw);
+    GrDrawTarget* prepareToDraw(const GrPaint*, BufferedDraw, AutoRestoreEffects*);
 
     void internalDrawPath(GrDrawTarget* target, bool useAA, const SkPath& path,
                           const SkStrokeRec& stroke);
