@@ -17,7 +17,7 @@
 
 #ifdef SK_BUILD_FOR_ANDROID
 #define GEN_ID_INC              fGenerationID++
-#define GEN_ID_PTR_INC(ptr)     ptr->fGenerationID++
+#define GEN_ID_PTR_INC(ptr)     (ptr)->fGenerationID++
 #else
 #define GEN_ID_INC
 #define GEN_ID_PTR_INC(ptr)
@@ -951,7 +951,6 @@ public:
         of SkPathRefs */
     class PathRefDebugRef {
     public:
-        PathRefDebugRef(SkPath* owner);
         PathRefDebugRef(SkPathRef* pr, SkPath* owner);
         ~PathRefDebugRef();
         void reset(SkPathRef* ref);
@@ -983,6 +982,19 @@ private:
     uint32_t            fGenerationID;
     const SkPath*       fSourcePath;
 #endif
+
+    /** Resets all fields other than fPathRef to their initial 'empty' values.
+     *  Assumes the caller has already emptied fPathRef.
+     *  On Android increments fGenerationID without reseting it.
+     */
+    void resetFields();
+
+    /** Sets all fields other than fPathRef to the values in 'that'.
+     *  Assumes the caller has already set fPathRef.
+     *  On Android increments fGenerationID without copying it.
+     *  On Android sets fSourcePath to NULL.
+     */
+    void copyFields(const SkPath& that);
 
     // called, if dirty, by getBounds()
     void computeBounds() const;

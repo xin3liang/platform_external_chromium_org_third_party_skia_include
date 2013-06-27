@@ -23,8 +23,7 @@ class SkPixelRef;
 class SkRegion;
 class SkString;
 
-// This is an opaque class, not interpreted by skia
-class SkGpuTexture;
+class GrTexture;
 
 /** \class SkBitmap
 
@@ -53,14 +52,12 @@ public:
         kRGB_565_Config,    //!< 16-bits per pixel, (see SkColorPriv.h for packing)
         kARGB_4444_Config,  //!< 16-bits per pixel, (see SkColorPriv.h for packing)
         kARGB_8888_Config,  //!< 32-bits per pixel, (see SkColorPriv.h for packing)
-        /**
-         *  Custom compressed format, not supported on all platforms.
-         *  Cannot be used as a destination (target of a canvas).
-         *  i.e. you may be able to draw from one, but you cannot draw into one.
-         */
-        kRLE_Index8_Config,
+    };
 
-        kConfigCount
+    // do not add this to the Config enum, otherwise the compiler will let us
+    // pass this as a valid parameter for Config.
+    enum {
+        kConfigCount = kARGB_8888_Config + 1
     };
 
     /**
@@ -362,17 +359,15 @@ public:
     */
     bool readyToDraw() const {
         return this->getPixels() != NULL &&
-               ((this->config() != kIndex8_Config &&
-                 this->config() != kRLE_Index8_Config) ||
-                       fColorTable != NULL);
+               (this->config() != kIndex8_Config || NULL != fColorTable);
     }
 
     /** Returns the pixelRef's texture, or NULL
      */
-    SkGpuTexture* getTexture() const;
+    GrTexture* getTexture() const;
 
     /** Return the bitmap's colortable, if it uses one (i.e. fConfig is
-        kIndex8_Config or kRLE_Index8_Config) and the pixels are locked.
+        kIndex8_Config) and the pixels are locked.
         Otherwise returns NULL. Does not affect the colortable's
         reference count.
     */
@@ -534,15 +529,10 @@ public:
      */
     bool canCopyTo(Config newConfig) const;
 
-    bool hasMipMap() const;
+    /**
+     *  DEPRECATED -- will be replaced with API on SkPaint
+     */
     void buildMipMap(bool forceRebuild = false);
-    void freeMipMap();
-
-    /** Given scale factors sx, sy, determine the miplevel available in the
-        bitmap, and return it (this is the amount to shift matrix iterators
-        by). If dst is not null, it is set to the correct level.
-    */
-    int extractMipLevel(SkBitmap* dst, SkFixed sx, SkFixed sy);
 
 #ifdef SK_BUILD_FOR_ANDROID
     bool hasHardwareMipMap() const {
@@ -692,6 +682,16 @@ private:
     void updatePixelsFromRef() const;
 
     static SkFixed ComputeMipLevel(SkFixed sx, SkFixed dy);
+
+    /** Given scale factors sx, sy, determine the miplevel available in the
+     bitmap, and return it (this is the amount to shift matrix iterators
+     by). If dst is not null, it is set to the correct level.
+     */
+    int extractMipLevel(SkBitmap* dst, SkFixed sx, SkFixed sy);
+    bool hasMipMap() const;
+    void freeMipMap();
+    
+    friend struct SkBitmapProcState;
 };
 
 class SkAutoLockPixels : public SkNoncopyable {
