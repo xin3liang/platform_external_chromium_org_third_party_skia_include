@@ -17,7 +17,7 @@
 
 #ifdef SK_BUILD_FOR_ANDROID
 #define GEN_ID_INC              fGenerationID++
-#define GEN_ID_PTR_INC(ptr)     ptr->fGenerationID++
+#define GEN_ID_PTR_INC(ptr)     (ptr)->fGenerationID++
 #else
 #define GEN_ID_INC
 #define GEN_ID_PTR_INC(ptr)
@@ -29,10 +29,6 @@ class SkAutoPathBoundsUpdate;
 class SkString;
 class SkPathRef;
 class SkRRect;
-
-#ifndef SK_DEBUG_PATH_REF
-    #define SK_DEBUG_PATH_REF 0
-#endif
 
 /** \class SkPath
 
@@ -945,30 +941,7 @@ private:
         kSegmentMask_SerializationShift = 0 // requires 4 bits
     };
 
-#if SK_DEBUG_PATH_REF
-public:
-    /** Debugging wrapper for SkAutoTUnref<SkPathRef> used to track owners (SkPaths)
-        of SkPathRefs */
-    class PathRefDebugRef {
-    public:
-        PathRefDebugRef(SkPath* owner);
-        PathRefDebugRef(SkPathRef* pr, SkPath* owner);
-        ~PathRefDebugRef();
-        void reset(SkPathRef* ref);
-        void swap(PathRefDebugRef* other);
-        SkPathRef* get() const;
-        SkAutoTUnref<SkPathRef>::BlockRefType *operator->() const;
-        operator SkPathRef*();
-    private:
-        SkAutoTUnref<SkPathRef>   fPathRef;
-        SkPath*                   fOwner;
-    };
-
-private:
-    PathRefDebugRef     fPathRef;
-#else
     SkAutoTUnref<SkPathRef> fPathRef;
-#endif
 
     mutable SkRect      fBounds;
     int                 fLastMoveToIndex;
@@ -983,6 +956,19 @@ private:
     uint32_t            fGenerationID;
     const SkPath*       fSourcePath;
 #endif
+
+    /** Resets all fields other than fPathRef to their initial 'empty' values.
+     *  Assumes the caller has already emptied fPathRef.
+     *  On Android increments fGenerationID without reseting it.
+     */
+    void resetFields();
+
+    /** Sets all fields other than fPathRef to the values in 'that'.
+     *  Assumes the caller has already set fPathRef.
+     *  On Android increments fGenerationID without copying it.
+     *  On Android sets fSourcePath to NULL.
+     */
+    void copyFields(const SkPath& that);
 
     // called, if dirty, by getBounds()
     void computeBounds() const;
