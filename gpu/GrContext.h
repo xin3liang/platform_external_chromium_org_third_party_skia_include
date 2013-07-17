@@ -477,14 +477,6 @@ public:
      */
     enum FlushBits {
         /**
-         * A client may want Gr to bind a GrRenderTarget in the 3D API so that
-         * it can be rendered to directly. However, Gr lazily sets state. Simply
-         * calling setRenderTarget() followed by flush() without flags may not
-         * bind the render target. This flag forces the context to bind the last
-         * set render target in the 3D API.
-         */
-        kForceCurrentRenderTarget_FlushBit   = 0x1,
-        /**
          * A client may reach a point where it has partially rendered a frame
          * through a GrContext that it knows the user will never see. This flag
          * causes the flush to skip submission of deferred content to the 3D API
@@ -626,22 +618,6 @@ public:
      * reading pixels back from a GrTexture or GrRenderTarget.
      */
     void resolveRenderTarget(GrRenderTarget* target);
-
-    /**
-     * Applies a 2D Gaussian blur to a given texture.
-     * @param srcTexture      The source texture to be blurred.
-     * @param canClobberSrc   If true, srcTexture may be overwritten, and
-     *                        may be returned as the result.
-     * @param rect            The destination rectangle.
-     * @param sigmaX          The blur's standard deviation in X.
-     * @param sigmaY          The blur's standard deviation in Y.
-     * @return the blurred texture, which may be srcTexture reffed, or a
-     * new texture.  It is the caller's responsibility to unref this texture.
-     */
-     GrTexture* gaussianBlur(GrTexture* srcTexture,
-                             bool canClobberSrc,
-                             const SkRect& rect,
-                             float sigmaX, float sigmaY);
 
     ///////////////////////////////////////////////////////////////////////////
     // Helpers
@@ -903,8 +879,6 @@ private:
 
     void setupDrawBuffer();
 
-    void flushDrawBuffer();
-
     class AutoRestoreEffects;
     /// Sets the paint and returns the target to draw into. The paint can be NULL in which case the
     /// draw state is left unmodified.
@@ -938,6 +912,12 @@ private:
     const GrEffectRef* createUPMToPMEffect(GrTexture* texture,
                                            bool swapRAndB,
                                            const SkMatrix& matrix);
+
+    /**
+     *  This callback allows the resource cache to callback into the GrContext
+     *  when the cache is still overbudget after a purge.
+     */
+    static bool OverbudgetCB(void* data);
 
     typedef GrRefCnt INHERITED;
 };

@@ -64,13 +64,6 @@ template <typename D, typename S> static D* SkTAddOffset(S* ptr, size_t byteOffs
     );
 }
 
-/** Returns true if the source value 's' will fit in the destination type 'D'. */
-template <typename D, typename S> inline bool SkTFitsIn(S s) {
-    // the cast to <S> is just to restore the signedness of S, to avoid
-    // sign-unsigned comparison warnings.
-    return static_cast<S>(static_cast<D>(s)) == s;
-}
-
 /** \class SkAutoTCallVProc
 
     Call a function when this goes out of scope. The template uses two
@@ -257,7 +250,9 @@ public:
         }
 
         if (fCount != count) {
-            if (count > N) {
+            if (fCount > N) {
+                // 'fArray' was allocated last time so free it now
+                SkASSERT((T*) fStorage != fArray);
                 sk_free(fArray);
             }
 
@@ -267,7 +262,6 @@ public:
                 fArray = (T*) fStorage;
             } else {
                 fArray = NULL;
-                return;
             }
 
             fCount = count;
