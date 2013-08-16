@@ -23,12 +23,15 @@ enum GrGLBinding {
     kNone_GrGLBinding = 0x0,
 
     kDesktop_GrGLBinding = 0x01,
-    kES2_GrGLBinding = 0x02,
+    kES_GrGLBinding = 0x02,  // ES2+ only
 
     // for iteration of GrGLBindings
     kFirstGrGLBinding = kDesktop_GrGLBinding,
-    kLastGrGLBinding = kES2_GrGLBinding
+    kLastGrGLBinding = kES_GrGLBinding
 };
+
+// Temporary alias until Chromium can be updated.
+static const GrGLBinding kES2_GrGLBinding = kES_GrGLBinding;
 
 ////////////////////////////////////////////////////////////////////////////////
 
