@@ -23,12 +23,15 @@ enum GrGLBinding {
     kNone_GrGLBinding = 0x0,
 
     kDesktop_GrGLBinding = 0x01,
-    kES2_GrGLBinding = 0x02,
+    kES_GrGLBinding = 0x02,  // ES2+ only
 
     // for iteration of GrGLBindings
     kFirstGrGLBinding = kDesktop_GrGLBinding,
-    kLastGrGLBinding = kES2_GrGLBinding
+    kLastGrGLBinding = kES_GrGLBinding
 };
+
+// Temporary alias until Chromium can be updated.
+static const GrGLBinding kES2_GrGLBinding = kES_GrGLBinding;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -107,7 +110,7 @@ typedef intptr_t GrGLInterfaceCallbackData;
  * non-NULL or GrContext creation will fail. This can be tested with the
  * validate() method when the OpenGL context has been made current.
  */
-struct GR_API GrGLInterface : public GrRefCnt {
+struct SK_API GrGLInterface : public GrRefCnt {
 private:
     // simple wrapper class that exists only to initialize a pointer to NULL
     template <typename FNPTR_TYPE> class GLPtr {

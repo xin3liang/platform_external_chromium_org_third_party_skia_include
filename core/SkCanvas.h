@@ -239,6 +239,12 @@ public:
         operate on this copy.
         When the balancing call to restore() is made, the previous matrix, clip,
         and drawFilter are restored.
+        @param flags The flags govern what portion of the Matrix/Clip/drawFilter
+                     state the save (and matching restore) effect. For example,
+                     if only kMatrix is specified, then only the matrix state
+                     will be pushed and popped. Likewise for the clip if kClip
+                     is specified.  However, the drawFilter is always affected
+                     by calls to save/restore.
         @return The value to pass to restoreToCount() to balance this save()
     */
     virtual int save(SaveFlags flags = kMatrixClip_SaveFlag);
@@ -667,6 +673,16 @@ public:
     virtual void drawBitmap(const SkBitmap& bitmap, SkScalar left, SkScalar top,
                             const SkPaint* paint = NULL);
 
+    enum DrawBitmapRectFlags {
+        kNone_DrawBitmapRectFlag            = 0x0,
+        /**
+         *  When filtering is enabled, allow the color samples outside of
+         *  the src rect (but still in the src bitmap) to bleed into the
+         *  drawn portion
+         */
+        kBleed_DrawBitmapRectFlag           = 0x1,
+    };
+
     /** Draw the specified bitmap, with the specified matrix applied (before the
         canvas' matrix is applied).
         @param bitmap   The bitmap to be drawn
@@ -677,22 +693,24 @@ public:
     */
     virtual void drawBitmapRectToRect(const SkBitmap& bitmap, const SkRect* src,
                                       const SkRect& dst,
-                                      const SkPaint* paint);
+                                      const SkPaint* paint = NULL,
+                                      DrawBitmapRectFlags flags = kNone_DrawBitmapRectFlag);
 
     void drawBitmapRect(const SkBitmap& bitmap, const SkRect& dst,
-                        const SkPaint* paint) {
-        this->drawBitmapRectToRect(bitmap, NULL, dst, paint);
+                        const SkPaint* paint = NULL) {
+        this->drawBitmapRectToRect(bitmap, NULL, dst, paint, kNone_DrawBitmapRectFlag);
     }
 
     void drawBitmapRect(const SkBitmap& bitmap, const SkIRect* isrc,
-                        const SkRect& dst, const SkPaint* paint = NULL) {
+                        const SkRect& dst, const SkPaint* paint = NULL,
+                        DrawBitmapRectFlags flags = kNone_DrawBitmapRectFlag) {
         SkRect realSrcStorage;
         SkRect* realSrcPtr = NULL;
         if (isrc) {
             realSrcStorage.set(*isrc);
             realSrcPtr = &realSrcStorage;
         }
-        this->drawBitmapRectToRect(bitmap, realSrcPtr, dst, paint);
+        this->drawBitmapRectToRect(bitmap, realSrcPtr, dst, paint, flags);
     }
 
     virtual void drawBitmapMatrix(const SkBitmap& bitmap, const SkMatrix& m,
@@ -1065,7 +1083,8 @@ private:
     // canvas apis, without confusing subclasses (like SkPictureRecording)
     void internalDrawBitmap(const SkBitmap&, const SkMatrix& m, const SkPaint* paint);
     void internalDrawBitmapRect(const SkBitmap& bitmap, const SkRect* src,
-                                const SkRect& dst, const SkPaint* paint);
+                                const SkRect& dst, const SkPaint* paint,
+                                DrawBitmapRectFlags flags);
     void internalDrawBitmapNine(const SkBitmap& bitmap, const SkIRect& center,
                                 const SkRect& dst, const SkPaint* paint);
     void internalDrawPaint(const SkPaint& paint);
