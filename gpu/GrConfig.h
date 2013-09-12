@@ -85,16 +85,6 @@
     #endif
 #endif
 
-#if !defined(SK_DEBUG) && !GR_RELEASE
-    #ifdef NDEBUG
-        #define GR_RELEASE 1
-    #endif
-#endif
-
-#if defined(SK_DEBUG) && GR_RELEASE
-    #error "cannot define both SK_DEBUG and GR_RELEASE"
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -244,17 +234,6 @@ inline void GrCrash() { GrAlwaysAssert(false); }
 inline void GrCrash(const char* msg) { GrPrintf(msg); GrAlwaysAssert(false); }
 inline void GrDebugCrash() { SkASSERT(false); }
 inline void GrDebugCrash(const char* msg) { GrPrintf(msg); SkASSERT(false); }
-
-/**
- *  GR_DEBUGCODE compiles the code X in debug builds only
- */
-#if !defined(GR_DEBUGCODE)
-    #ifdef SK_DEBUG
-        #define GR_DEBUGCODE(X) X
-    #else
-        #define GR_DEBUGCODE(X)
-    #endif
-#endif
 
 /**
  *  GR_STATIC_ASSERT is a compile time assertion. Depending on the platform
