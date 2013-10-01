@@ -17,6 +17,7 @@
 class GrBackendEffectFactory;
 class GrContext;
 class GrEffect;
+class GrVertexEffect;
 class SkString;
 
 /**
@@ -85,15 +86,11 @@ public:
     /**
      * The types of vertex coordinates available to an effect in the vertex shader. Effects can
      * require their own vertex attribute but these coordinates are made available by the framework
-     * in all programs. kCustom_CoordsType is provided to signify that an alternative set of coords
-     * is used (usually an explicit vertex attribute) but its meaning is determined by the effect
-     * subclass.
+     * in all programs.
      */
     enum CoordsType {
         kLocal_CoordsType,
         kPosition_CoordsType,
-
-        kCustom_CoordsType,
     };
 
     virtual ~GrEffect();
@@ -156,7 +153,14 @@ public:
     /** Will this effect read the fragment position? */
     bool willReadFragmentPosition() const { return fWillReadFragmentPosition; }
 
-    int numVertexAttribs() const { return fVertexAttribTypes.count(); }
+    /** Will this effect emit custom vertex shader code?
+        (To set this value the effect must inherit from GrVertexEffect.) */
+    bool hasVertexCode() const { return fHasVertexCode; }
+
+    int numVertexAttribs() const {
+        SkASSERT(0 == fVertexAttribTypes.count() || fHasVertexCode);
+        return fVertexAttribTypes.count();
+    }
 
     GrSLType vertexAttribType(int index) const { return fVertexAttribTypes[index]; }
 
@@ -208,14 +212,11 @@ protected:
      */
     void addTextureAccess(const GrTextureAccess* textureAccess);
 
-    /**
-     * Subclasses call this from their constructor to register vertex attributes (at most
-     * kMaxVertexAttribs). This must only be called from the constructor because GrEffects are
-     * immutable.
-     */
-    void addVertexAttrib(GrSLType type);
-
-    GrEffect() : fWillReadDstColor(false), fWillReadFragmentPosition(false), fEffectRef(NULL) {}
+    GrEffect()
+        : fWillReadDstColor(false)
+        , fWillReadFragmentPosition(false)
+        , fHasVertexCode(false)
+        , fEffectRef(NULL) {}
 
     /** This should be called by GrEffect subclass factories. See the comment on AutoEffectUnref for
         an example factory function. */
@@ -304,15 +305,17 @@ private:
 
     void EffectRefDestroyed() { fEffectRef = NULL; }
 
-    friend class GrEffectRef;   // to call EffectRefDestroyed()
-    friend class GrEffectStage; // to rewrap GrEffect in GrEffectRef when restoring an effect-stage
-                                // from deferred state, to call isEqual on naked GrEffects, and
-                                // to inc/dec deferred ref counts.
+    friend class GrEffectRef;    // to call EffectRefDestroyed()
+    friend class GrEffectStage;  // to rewrap GrEffect in GrEffectRef when restoring an effect-stage
+                                 // from deferred state, to call isEqual on naked GrEffects, and
+                                 // to inc/dec deferred ref counts.
+    friend class GrVertexEffect; // to set fHasVertexCode and build fVertexAttribTypes.
 
     SkSTArray<4, const GrTextureAccess*, true>   fTextureAccesses;
     SkSTArray<kMaxVertexAttribs, GrSLType, true> fVertexAttribTypes;
     bool                                         fWillReadDstColor;
     bool                                         fWillReadFragmentPosition;
+    bool                                         fHasVertexCode;
     GrEffectRef*                                 fEffectRef;
 
     typedef SkRefCnt INHERITED;
