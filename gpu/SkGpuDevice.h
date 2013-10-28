@@ -188,19 +188,20 @@ private:
      */
     bool shouldTileBitmap(const SkBitmap& bitmap,
                           const GrTextureParams& sampler,
-                          const SkRect* srcRectPtr) const;
+                          const SkRect* srcRectPtr,
+                          int maxTileSize,
+                          int* tileSize) const;
     void internalDrawBitmap(const SkBitmap&,
                             const SkRect&,
-                            const SkMatrix&,
                             const GrTextureParams& params,
                             const SkPaint& paint,
                             SkCanvas::DrawBitmapRectFlags flags);
     void drawTiledBitmap(const SkBitmap& bitmap,
                          const SkRect& srcRect,
-                         const SkMatrix& m,
                          const GrTextureParams& params,
                          const SkPaint& paint,
-                         SkCanvas::DrawBitmapRectFlags flags);
+                         SkCanvas::DrawBitmapRectFlags flags,
+                         int tileSize);
 
     /**
      * Returns non-initialized instance.
