@@ -29,6 +29,7 @@ class GrIndexBuffer;
 class GrIndexBufferAllocPool;
 class GrInOrderDrawBuffer;
 class GrOvalRenderer;
+class GrPath;
 class GrPathRenderer;
 class GrResourceEntry;
 class GrResourceCache;
@@ -379,10 +380,12 @@ public:
      * Clear the entire or rect of the render target, ignoring any clips.
      * @param rect  the rect to clear or the whole thing if rect is NULL.
      * @param color the color to clear to.
+     * @param canIgnoreRect allows partial clears to be converted to whole
+     *                      clears on platforms for which that is cheap
      * @param target if non-NULL, the render target to clear otherwise clear
      *               the current render target
      */
-    void clear(const SkIRect* rect, GrColor color,
+    void clear(const SkIRect* rect, GrColor color, bool canIgnoreRect,
                GrRenderTarget* target = NULL);
 
     /**
@@ -922,6 +925,7 @@ private:
     // Needed so GrTexture's returnToCache helper function can call
     // addExistingTextureToCache
     friend class GrTexture;
+    friend class GrStencilAndCoverPathRenderer;
 
     // Add an existing texture to the texture cache. This is intended solely
     // for use with textures released from an GrAutoScratchTexture.
@@ -944,6 +948,15 @@ private:
      *  when the cache is still overbudget after a purge.
      */
     static bool OverbudgetCB(void* data);
+
+    /** Creates a new gpu path, based on the specified path and stroke and returns it.
+     * The caller owns a ref on the returned path which must be balanced by a call to unref.
+     *
+     * @param skPath the path geometry.
+     * @param stroke the path stroke.
+     * @return a new path or NULL if the operation is not supported by the backend.
+     */
+    GrPath* createPath(const SkPath& skPath, const SkStrokeRec& stroke);
 
     typedef SkRefCnt INHERITED;
 };
