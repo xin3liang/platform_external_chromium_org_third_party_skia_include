@@ -730,6 +730,8 @@ private:
     const SkBitmap& fBitmap;
     bool            fDidLock;
 };
+//TODO(mtklein): uncomment when 71713004 lands and Chromium's fixed.
+//#define SkAutoLockPixels(...) SK_REQUIRE_LOCAL_VAR(SkAutoLockPixels)
 
 /** Helper class that performs the lock/unlockColors calls on a colortable.
     The destructor will call unlockColors(false) if it has a bitmap's colortable
@@ -783,6 +785,7 @@ private:
     SkColorTable*    fCTable;
     const SkPMColor* fColors;
 };
+#define SkAutoLockColors(...) SK_REQUIRE_LOCAL_VAR(SkAutoLockColors)
 
 ///////////////////////////////////////////////////////////////////////////////
 
