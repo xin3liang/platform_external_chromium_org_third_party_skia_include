@@ -11,9 +11,9 @@
 #define SkBitmap_DEFINED
 
 #include "Sk64.h"
-#include "SkAlpha.h"
 #include "SkColor.h"
 #include "SkColorTable.h"
+#include "SkImageInfo.h"
 #include "SkPoint.h"
 #include "SkRefCnt.h"
 
@@ -38,7 +38,7 @@ class GrTexture;
 */
 class SK_API SkBitmap {
 public:
-    class Allocator;
+    class SK_API Allocator;
 
     enum Config {
         kNo_Config,         //!< bitmap has not been configured
@@ -188,11 +188,6 @@ public:
         return SkAlphaTypeIsOpaque(this->alphaType());
     }
 
-    SK_ATTR_DEPRECATED("use setAlphaType")
-    void setIsOpaque(bool opaque) {
-        this->setAlphaType(opaque ? kOpaque_SkAlphaType : kPremul_SkAlphaType);
-    }
-
     /** Returns true if the bitmap is volatile (i.e. should not be cached by devices.)
     */
     bool isVolatile() const;
@@ -237,8 +232,8 @@ public:
      *  it will return false.
      *
      *  Since this can be an expensive operation, the bitmap stores a flag for
-     *  this (isOpaque, setIsOpaque). Only call this if you need to compute this
-     *  value from "unknown" pixels.
+     *  this (isOpaque). Only call this if you need to compute this value from
+     *  "unknown" pixels.
      */
     static bool ComputeIsOpaque(const SkBitmap&);
 
@@ -259,6 +254,7 @@ public:
                                kPremul_SkAlphaType);
     }
 
+    bool setConfig(const SkImageInfo& info, size_t rowBytes = 0);
 
     /** Use this to assign a new pixel address for an existing bitmap. This
         will automatically release any pixelref previously installed. Only call
@@ -734,6 +730,8 @@ private:
     const SkBitmap& fBitmap;
     bool            fDidLock;
 };
+//TODO(mtklein): uncomment when 71713004 lands and Chromium's fixed.
+//#define SkAutoLockPixels(...) SK_REQUIRE_LOCAL_VAR(SkAutoLockPixels)
 
 /** Helper class that performs the lock/unlockColors calls on a colortable.
     The destructor will call unlockColors(false) if it has a bitmap's colortable
@@ -787,6 +785,7 @@ private:
     SkColorTable*    fCTable;
     const SkPMColor* fColors;
 };
+#define SkAutoLockColors(...) SK_REQUIRE_LOCAL_VAR(SkAutoLockColors)
 
 ///////////////////////////////////////////////////////////////////////////////
 

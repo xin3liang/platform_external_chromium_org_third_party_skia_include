@@ -376,11 +376,32 @@
 
 #if !defined(SK_ATTR_DEPRECATED)
     // we ignore msg for now...
-    #define SK_ATTR_DEPRECATED(msg) //SK_ATTRIBUTE(deprecated)
+    #define SK_ATTR_DEPRECATED(msg) SK_ATTRIBUTE(deprecated)
+#endif
+
+// If your judgment is better than the compiler's (i.e. you've profiled it),
+// you can use SK_ALWAYS_INLINE to force inlining. E.g.
+//     inline void someMethod() { ... }             // may not be inlined
+//     SK_ALWAYS_INLINE void someMethod() { ... }   // should always be inlined
+#if !defined(SK_ALWAYS_INLINE)
+#  if defined(SK_BUILD_FOR_WIN)
+#    define SK_ALWAYS_INLINE __forceinline
+#  else
+#    define SK_ALWAYS_INLINE SK_ATTRIBUTE(always_inline) inline
+#  endif
 #endif
 
 //////////////////////////////////////////////////////////////////////
 
+#if defined(__clang__) || defined(__GNUC__)
+#define SK_PREFETCH(ptr) __builtin_prefetch(ptr)
+#define SK_WRITE_PREFETCH(ptr) __builtin_prefetch(ptr, 1)
+#else
+#define SK_PREFETCH(ptr)
+#define SK_WRITE_PREFETCH(ptr)
+#endif
+
+//////////////////////////////////////////////////////////////////////
 #ifndef SK_PRINTF_LIKE
 #if defined(__clang__) || defined(__GNUC__)
 #define SK_PRINTF_LIKE(A, B) __attribute__((format(printf, (A), (B))))
