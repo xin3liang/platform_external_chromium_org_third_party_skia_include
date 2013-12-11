@@ -16,6 +16,8 @@
 #include "SkFlattenable.h"
 #include "SkTDArray.h"
 
+#define SK_SUPPORT_LEGACY_PIXELREF_CONSTRUCTOR
+
 #ifdef SK_DEBUG
     /**
      *  Defining SK_IGNORE_PIXELREF_SETPRELOCKED will force all pixelref
@@ -49,8 +51,18 @@ class SK_API SkPixelRef : public SkFlattenable {
 public:
     SK_DECLARE_INST_COUNT(SkPixelRef)
 
+#ifdef SK_SUPPORT_LEGACY_PIXELREF_CONSTRUCTOR
+    // DEPRECATED -- use a constructor that takes SkImageInfo
     explicit SkPixelRef(SkBaseMutex* mutex = NULL);
+#endif
+
+    explicit SkPixelRef(const SkImageInfo&);
+    SkPixelRef(const SkImageInfo&, SkBaseMutex* mutex);
     virtual ~SkPixelRef();
+
+    const SkImageInfo& info() const {
+        return fInfo;
+    }
 
     /** Return the pixel memory returned from lockPixels, or null if the
         lockCount is 0.
@@ -283,6 +295,8 @@ protected:
 
 private:
     SkBaseMutex*    fMutex; // must remain in scope for the life of this object
+    SkImageInfo     fInfo;
+
     void*           fPixels;
     SkColorTable*   fColorTable;    // we do not track ownership, subclass does
     int             fLockCount;
