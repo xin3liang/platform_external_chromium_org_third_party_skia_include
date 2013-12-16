@@ -16,7 +16,7 @@
 #include "SkFlattenable.h"
 #include "SkTDArray.h"
 
-#define SK_SUPPORT_LEGACY_PIXELREF_CONSTRUCTOR
+//#define SK_SUPPORT_LEGACY_PIXELREF_CONSTRUCTOR
 
 #ifdef SK_DEBUG
     /**
@@ -244,10 +244,15 @@ protected:
         acquire a mutex for thread safety, so this method need not do that.
     */
     virtual void* onLockPixels(SkColorTable**) = 0;
-    /** Called when the lock count goes from 1 to 0. The caller will have
-        already acquire a mutex for thread safety, so this method need not do
-        that.
-    */
+ 
+    /**
+     *  Called when the lock count goes from 1 to 0. The caller will have
+     *  already acquire a mutex for thread safety, so this method need not do
+     *  that.
+     *
+     *  If the previous call to onLockPixels failed (i.e. returned NULL), then
+     *  the onUnlockPixels will NOT be called.
+     */
     virtual void onUnlockPixels() = 0;
 
     /** Default impl returns true */
