@@ -108,15 +108,6 @@ inline SkScalar SkScalarSquare(SkScalar x) { return x * x; }
 /** Returns the product of two SkScalars plus a third SkScalar
 */
 #define SkScalarMulAdd(a, b, c) ((float)(a) * (b) + (c))
-/** Returns the product of a SkScalar and an int rounded to the nearest integer value
-*/
-#define SkScalarMulRound(a, b) SkScalarRoundToInt((float)(a) * (b))
-/** Returns the product of a SkScalar and an int promoted to the next larger int
-*/
-#define SkScalarMulCeil(a, b) SkScalarCeilToInt((float)(a) * (b))
-/** Returns the product of a SkScalar and an int truncated to the next smaller int
-*/
-#define SkScalarMulFloor(a, b) SkScalarFloorToInt((float)(a) * (b))
 /** Returns the quotient of two SkScalars (a/b)
 */
 #define SkScalarDiv(a, b)       ((float)(a) / (b))
@@ -139,9 +130,6 @@ inline SkScalar SkScalarSquare(SkScalar x) { return x * x; }
 /** Returns the average of two SkScalars (a+b)/2
 */
 #define SkScalarAve(a, b)       (((a) + (b)) * 0.5f)
-/** Returns the geometric mean of two SkScalars
-*/
-#define SkScalarMean(a, b)      sk_float_sqrt((float)(a) * (b))
 /** Returns one half of the specified SkScalar
 */
 #define SkScalarHalf(a)         ((a) * 0.5f)
@@ -214,12 +202,6 @@ static inline bool SkScalarNearlyEqual(SkScalar x, SkScalar y,
 static inline SkScalar SkScalarInterp(SkScalar A, SkScalar B, SkScalar t) {
     SkASSERT(t >= 0 && t <= SK_Scalar1);
     return A + SkScalarMul(B - A, t);
-}
-
-static inline SkScalar SkScalarLog2(SkScalar x) {
-    static const SkScalar log2_conversion_factor = SkScalarDiv(1, SkScalarLog(2));
-
-    return SkScalarMul(SkScalarLog(x), log2_conversion_factor);
 }
 
 /** Interpolate along the function described by (keys[length], values[length])
