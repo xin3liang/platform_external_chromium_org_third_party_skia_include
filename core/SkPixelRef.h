@@ -67,6 +67,22 @@ public:
     SkColorTable* colorTable() const { return fColorTable; }
 
     /**
+     *  To access the actual pixels of a pixelref, it must be "locked".
+     *  Calling lockPixels returns a LockRec struct (on success).
+     */
+    struct LockRec {
+        void*           fPixels;
+        SkColorTable*   fColorTable;
+        size_t          fRowBytes;
+
+        void zero() { sk_bzero(this, sizeof(*this)); }
+
+        bool isZero() const {
+            return NULL == fPixels && NULL == fColorTable && 0 == fRowBytes;
+        }
+    };
+
+    /**
      *  Returns true if the lockcount > 0
      */
     bool isLocked() const { return fLockCount > 0; }
