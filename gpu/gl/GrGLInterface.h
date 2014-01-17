@@ -14,22 +14,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Classifies GL contexts (currently as Desktop vs. ES2). This is a bitfield.
- * A GrGLInterface (defined below) may support multiple bindings.
+ * Classifies GL contexts by which standard they implement (currently as Desktop
+ * vs. ES).
  */
-enum GrGLBinding {
-    kNone_GrGLBinding = 0x0,
-
-    kDesktop_GrGLBinding = 0x01,
-    kES_GrGLBinding = 0x02,  // ES2+ only
-
-    // for iteration of GrGLBindings
-    kFirstGrGLBinding = kDesktop_GrGLBinding,
-    kLastGrGLBinding = kES_GrGLBinding
+enum GrGLStandard {
+    kNone_GrGLStandard,
+    kGL_GrGLStandard,
+    kGLES_GrGLStandard,
 };
 
-// Temporary alias until Chromium can be updated.
-static const GrGLBinding kES2_GrGLBinding = kES_GrGLBinding;
+// Temporary aliases until Chromium can be updated.
+typedef GrGLStandard GrGLBinding;
+static const GrGLStandard kES2_GrGLBinding = kGLES_GrGLStandard;
+static const GrGLStandard kDesktop_GrGLBinding = kGL_GrGLStandard;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -121,15 +118,16 @@ public:
 
     GrGLInterface();
 
-    // Validates that the GrGLInterface supports a binding. This means that
-    // the GrGLinterface advertises the binding in fBindingsExported and all
-    // the necessary function pointers have been initialized. The interface is
-    // validated for the current OpenGL context.
-    bool validate(GrGLBinding binding) const;
+    // Validates that the GrGLInterface supports its advertised standard. This means the necessary
+    // function pointers have been initialized for both the GL version and any advertised
+    // extensions.
+    bool validate() const;
 
-    // Indicator variable specifying the type of GL implementation
-    // exported:  GLES2 and/or Desktop.
-    GrGLBinding fBindingsExported;
+    // Indicates the type of GL implementation
+    union {
+        GrGLStandard fStandard;
+        GrGLStandard fBindingsExported; // Legacy name, will be remove when Chromium is updated.
+    };
 
     GLPtr<GrGLActiveTextureProc> fActiveTexture;
     GLPtr<GrGLAttachShaderProc> fAttachShader;
@@ -222,7 +220,6 @@ public:
     GLPtr<GrGLReadPixelsProc> fReadPixels;
     GLPtr<GrGLRenderbufferStorageProc> fRenderbufferStorage;
 
-#if !GR_GL_IGNORE_ES3_MSAA
     //  On OpenGL ES there are multiple incompatible extensions that add support for MSAA
     //  and ES3 adds MSAA support to the standard. On an ES3 driver we may still use the
     //  older extensions for performance reasons or due to ES3 driver bugs. We want the function
@@ -241,7 +238,7 @@ public:
     GLPtr<GrGLRenderbufferStorageMultisampleProc> fRenderbufferStorageMultisampleES2EXT;
     //  GL_APPLE_framebuffer_multisample
     GLPtr<GrGLRenderbufferStorageMultisampleProc> fRenderbufferStorageMultisampleES2APPLE;
-#endif
+
     //  This is used to store the pointer for GL_ARB/EXT/ANGLE/CHROMIUM_framebuffer_multisample or
     //  the standard function in ES3+ or GL 3.0+.
     GLPtr<GrGLRenderbufferStorageMultisampleProc> fRenderbufferStorageMultisample;
