@@ -16,6 +16,7 @@
 */
 class SK_API SkMallocPixelRef : public SkPixelRef {
 public:
+    SK_DECLARE_INST_COUNT(SkMallocPixelRef)
     /**
      *  Return a new SkMallocPixelRef with the provided pixel storage, rowBytes,
      *  and optional colortable. The caller is responsible for managing the
@@ -77,6 +78,12 @@ public:
                                          size_t offset = 0);
 
     void* getAddr() const { return fStorage; }
+
+    class PRFactory : public SkPixelRefFactory {
+    public:
+        virtual SkPixelRef* create(const SkImageInfo&,
+                                   SkColorTable*) SK_OVERRIDE;
+    };
 
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(SkMallocPixelRef)
 
