@@ -16,10 +16,11 @@
 #include "SkBitmapDevice.h"
 #include "SkRegion.h"
 #include "GrContext.h"
-#include "GrTextContext.h"
 
 struct SkDrawProcs;
 struct GrSkDrawProcs;
+
+class GrTextContext;
 
 /**
  *  Subclass of SkBitmapDevice, which directs all drawing to the GrGpu owned by the
@@ -149,7 +150,8 @@ private:
 
     GrClipData      fClipData;
 
-    GrTextContextManager* fTextContextManager;
+    GrTextContext*  fMainTextContext;
+    GrTextContext*  fFallbackTextContext;
 
     // state for our render-target
     GrRenderTarget*     fRenderTarget;
@@ -207,11 +209,6 @@ private:
                          SkCanvas::DrawBitmapRectFlags flags,
                          int tileSize,
                          bool bicubic);
-
-    /**
-     * Returns non-initialized instance.
-     */
-    GrTextContext* getTextContext();
 
     typedef SkBitmapDevice INHERITED;
 };

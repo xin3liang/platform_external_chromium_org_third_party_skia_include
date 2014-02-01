@@ -15,6 +15,7 @@
 #include "SkPaint.h"
 
 class GrContext;
+class GrPaint;
 class SkBitmap;
 class SkBlitter;
 class SkBounder;
@@ -22,6 +23,7 @@ class SkMatrix;
 class SkPath;
 class SkRasterClip;
 class SkRRect;
+class SkStrokeRec;
 
 /** \class SkMaskFilter
 
@@ -94,6 +96,15 @@ public:
                                   SkRect* maskRect) const;
 
     /**
+     *  Try to directly render the mask filter into the target.  Returns
+     *  true if drawing was successful.
+     */
+    virtual bool directFilterMaskGPU(GrContext* context,
+                                     GrPaint* grp,
+                                     const SkStrokeRec& strokeRec,
+                                     const SkPath& path) const;
+
+    /**
      * This function is used to implement filters that require an explicit src mask. It should only
      * be called if canFilterMaskGPU returned true and the maskRect param should be the output from
      * that call. canOverwriteSrc indicates whether the implementation may treat src as a scratch
@@ -126,7 +137,7 @@ public:
 
 protected:
     // empty for now, but lets get our subclass to remember to init us for the future
-    SkMaskFilter(SkFlattenableReadBuffer& buffer) : INHERITED(buffer) {}
+    SkMaskFilter(SkReadBuffer& buffer) : INHERITED(buffer) {}
 
     enum FilterReturn {
         kFalse_FilterReturn,
