@@ -131,8 +131,8 @@ public:
      */
     virtual void makeRenderTargetCurrent();
 
-    virtual bool canHandleImageFilter(SkImageFilter*) SK_OVERRIDE;
-    virtual bool filterImage(SkImageFilter*, const SkBitmap&, const SkMatrix&,
+    virtual bool canHandleImageFilter(const SkImageFilter*) SK_OVERRIDE;
+    virtual bool filterImage(const SkImageFilter*, const SkBitmap&, const SkMatrix&,
                              SkBitmap*, SkIPoint*) SK_OVERRIDE;
 
     class SkAutoCachedTexture; // used internally
@@ -168,6 +168,8 @@ private:
                                                    int width, int height,
                                                    bool isOpaque,
                                                    Usage usage) SK_OVERRIDE;
+
+    virtual SkSurface* newSurface(const SkImageInfo&) SK_OVERRIDE;
 
     // sets the render target, clip, and matrix on GrContext. Use forceIdenity to override
     // SkDraw's matrix and draw in device coords.
