@@ -30,12 +30,17 @@ public:
      *  first time an allocation doesn't fit.  From then it will use dynamically allocated storage.
      *  This used to be optional behavior, but pipe now relies on it.
      */
-    SkWriter32(void* external = NULL, size_t externalBytes = 0) {
+    SkWriter32(void* external = NULL, size_t externalBytes = 0)
+        : fData(0)
+        , fCapacity(0)
+        , fUsed(0)
+        , fExternal(0)
+    {
         this->reset(external, externalBytes);
     }
 
     // return the current offset (will always be a multiple of 4)
-    size_t bytesWritten() const { return fCount * 4; }
+    size_t bytesWritten() const { return fUsed; }
 
     SK_ATTR_DEPRECATED("use bytesWritten")
     size_t size() const { return this->bytesWritten(); }
@@ -43,45 +48,52 @@ public:
     void reset(void* external = NULL, size_t externalBytes = 0) {
         SkASSERT(SkIsAlign4((uintptr_t)external));
         SkASSERT(SkIsAlign4(externalBytes));
-        fExternal = (uint32_t*)external;
-        fExternalLimit = SkToInt(externalBytes/4);
-        fCount = 0;
-        fInternal.rewind();
+
+        fData = (uint8_t*)external;
+        fCapacity = externalBytes;
+        fUsed = 0;
+        fExternal = external;
     }
 
-    // If all data written is contiguous, then this returns a pointer to it, otherwise NULL.
-    // This will work if we've only written to the externally supplied block of storage, or if we've
-    // only written to our internal dynamic storage, but will fail if we have written into both.
+    // Returns the current buffer.
+    // The pointer may be invalidated by any future write calls.
     const uint32_t* contiguousArray() const {
-        if (this->externalCount()  == 0) {
-            return fInternal.begin();
-        } else if (fInternal.isEmpty()) {
-            return fExternal;
-        }
-        return NULL;
+        return (uint32_t*)fData;
     }
 
     // size MUST be multiple of 4
     uint32_t* reserve(size_t size) {
         SkASSERT(SkAlign4(size) == size);
-        const int count = SkToInt(size/4);
-
-        uint32_t* p;
-        // Once we start writing to fInternal, we never write to fExternal again.
-        // This simplifies tracking what data is where.
-        if (fInternal.isEmpty() && this->externalCount() + count <= fExternalLimit) {
-            p = fExternal + fCount;
-        } else {
-            p = fInternal.append(count);
+        size_t offset = fUsed;
+        size_t totalRequired = fUsed + size;
+        if (totalRequired > fCapacity) {
+            this->growToAtLeast(totalRequired);
         }
-
-        fCount += count;
-        return p;
+        fUsed = totalRequired;
+        return (uint32_t*)(fData + offset);
     }
 
-    // Read or write 4 bytes at offset, which must be a multiple of 4 <= size().
-    uint32_t read32At(size_t offset) { return this->atOffset(offset); }
-    void write32At(size_t offset, uint32_t val) { this->atOffset(offset) = val; }
+    /**
+     *  Read a T record at offset, which must be a multiple of 4. Only legal if the record
+     *  was writtern atomically using the write methods below.
+     */
+    template<typename T>
+    const T& readTAt(size_t offset) const {
+        SkASSERT(SkAlign4(offset) == offset);
+        SkASSERT(offset < fUsed);
+        return *(T*)(fData + offset);
+    }
+
+    /**
+     *  Overwrite a T record at offset, which must be a multiple of 4. Only legal if the record
+     *  was writtern atomically using the write methods below.
+     */
+    template<typename T>
+    void overwriteTAt(size_t offset, const T& value) {
+        SkASSERT(SkAlign4(offset) == offset);
+        SkASSERT(offset < fUsed);
+        *(T*)(fData + offset) = value;
+    }
 
     bool writeBool(bool value) {
         this->write32(value);
@@ -157,8 +169,6 @@ public:
      */
     void write(const void* values, size_t size) {
         SkASSERT(SkAlign4(size) == size);
-        // TODO: If we're going to spill from fExternal to fInternal, we might want to fill
-        // fExternal as much as possible before writing to fInternal.
         memcpy(this->reserve(size), values, size);
     }
 
@@ -167,14 +177,11 @@ public:
      *  filled in with zeroes.
      */
     uint32_t* reservePad(size_t size) {
-        uint32_t* p = this->reserve(SkAlign4(size));
-        uint8_t* tail = (uint8_t*)p + size;
-        switch (SkAlign4(size) - size) {
-            default: SkDEBUGFAIL("SkAlign4(x) - x should always be 0, 1, 2, or 3.");
-            case 3: *tail++ = 0x00;  // fallthrough is intentional
-            case 2: *tail++ = 0x00;  // fallthrough is intentional
-            case 1: *tail++ = 0x00;
-            case 0: ;/*nothing to do*/
+        size_t alignedSize = SkAlign4(size);
+        uint32_t* p = this->reserve(alignedSize);
+        if (alignedSize != size) {
+            SkASSERT(alignedSize >= 4);
+            p[alignedSize / 4 - 1] = 0;
         }
         return p;
     }
@@ -209,26 +216,17 @@ public:
      */
     void rewindToOffset(size_t offset) {
         SkASSERT(SkAlign4(offset) == offset);
-        const int count = SkToInt(offset/4);
-        if (count < this->externalCount()) {
-            fInternal.setCount(0);
-        } else {
-            fInternal.setCount(count - this->externalCount());
-        }
-        fCount = count;
+        SkASSERT(offset <= bytesWritten());
+        fUsed = offset;
     }
 
     // copy into a single buffer (allocated by caller). Must be at least size()
     void flatten(void* dst) const {
-        const size_t externalBytes = this->externalCount()*4;
-        memcpy(dst, fExternal, externalBytes);
-        dst = (uint8_t*)dst + externalBytes;
-        memcpy(dst, fInternal.begin(), fInternal.bytes());
+        memcpy(dst, fData, fUsed);
     }
 
     bool writeToStream(SkWStream* stream) const {
-        return stream->write(fExternal, this->externalCount()*4)
-            && stream->write(fInternal.begin(), fInternal.bytes());
+        return stream->write(fData, fUsed);
     }
 
     // read from the stream, and write up to length bytes. Return the actual
@@ -238,25 +236,13 @@ public:
     }
 
 private:
-    uint32_t& atOffset(size_t offset) {
-        SkASSERT(SkAlign4(offset) == offset);
-        const int count = SkToInt(offset/4);
-        SkASSERT(count < fCount);
+    void growToAtLeast(size_t size);
 
-        if (count < this->externalCount()) {
-            return fExternal[count];
-        }
-        return fInternal[count - this->externalCount()];
-    }
-
-
-    // Number of uint32_t written into fExternal.  <= fExternalLimit.
-    int externalCount() const { return fCount - fInternal.count(); }
-
-    int fCount;                     // Total number of uint32_t written.
-    int fExternalLimit;             // Number of uint32_t we can write to fExternal.
-    uint32_t* fExternal;            // Unmanaged memory block.
-    SkTDArray<uint32_t> fInternal;  // Managed memory block.
+    uint8_t* fData;                // Points to either fInternal or fExternal.
+    size_t fCapacity;              // Number of bytes we can write to fData.
+    size_t fUsed;                  // Number of bytes written.
+    void* fExternal;               // Unmanaged memory block.
+    SkTDArray<uint8_t> fInternal;  // Managed memory block.
 };
 
 /**
@@ -267,7 +253,9 @@ private:
  */
 template <size_t SIZE> class SkSWriter32 : public SkWriter32 {
 public:
-    SkSWriter32() : SkWriter32(fData.fStorage, SIZE) {}
+    SkSWriter32() { this->reset(); }
+
+    void reset() {this->INHERITED::reset(fData.fStorage, SIZE); }
 
 private:
     union {
@@ -275,6 +263,8 @@ private:
         double  fDoubleAlignment;
         char    fStorage[SIZE];
     } fData;
+
+    typedef SkWriter32 INHERITED;
 };
 
 #endif
