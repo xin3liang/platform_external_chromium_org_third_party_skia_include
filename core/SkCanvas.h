@@ -488,6 +488,20 @@ public:
     */
     bool quickRejectY(SkScalar top, SkScalar bottom) const {
         SkASSERT(top <= bottom);
+
+#ifndef SK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT
+        // TODO: add a hasPerspective method similar to getLocalClipBounds. This
+        // would cache the SkMatrix::hasPerspective result. Alternatively, have
+        // the MC stack just set a hasPerspective boolean as it is updated.
+        if (this->getTotalMatrix().hasPerspective()) {
+            // TODO: consider implementing some half-plane test between the
+            // two Y planes and the device-bounds (i.e., project the top and
+            // bottom Y planes and then determine if the clip bounds is completely
+            // outside either one).
+            return false;
+        }
+#endif
+
         const SkRect& clipR = this->getLocalClipBounds();
         // In the case where the clip is empty and we are provided with a
         // negative top and positive bottom parameter then this test will return
@@ -621,8 +635,7 @@ public:
         @param rect     The rect to be drawn
         @param paint    The paint used to draw the rect
     */
-    void drawIRect(const SkIRect& rect, const SkPaint& paint)
-    {
+    void drawIRect(const SkIRect& rect, const SkPaint& paint) {
         SkRect r;
         r.set(rect);    // promotes the ints to scalars
         this->drawRect(r, paint);
@@ -990,6 +1003,7 @@ public:
     public:
         virtual ~ClipVisitor();
         virtual void clipRect(const SkRect&, SkRegion::Op, bool antialias) = 0;
+        virtual void clipRRect(const SkRRect&, SkRegion::Op, bool antialias) = 0;
         virtual void clipPath(const SkPath&, SkRegion::Op, bool antialias) = 0;
     };
 
@@ -1070,17 +1084,6 @@ protected:
     // can perform copy-on-write or invalidate any cached images
     void predrawNotify();
 
-    /**
-     DEPRECATED -- need to remove when subclass stop relying on it.
-     Marked as 'protected' to avoid new clients using this before we can
-     completely remove it.
-
-     Specify a device for this canvas to draw into. If it is not null, its
-     reference count is incremented. If the canvas was already holding a
-     device, its reference count is decremented. The new device is returned.
-     */
-    virtual SkBaseDevice* setDevice(SkBaseDevice* device);
-
 private:
     class MCRec;
 
@@ -1110,10 +1113,19 @@ private:
     friend class SkDrawIter;    // needs setupDrawForLayerDevice()
     friend class AutoDrawLooper;
 
-    SkBaseDevice* createLayerDevice(SkBitmap::Config, int width, int height,
-                                    bool isOpaque);
+    SkBaseDevice* createLayerDevice(const SkImageInfo&);
 
     SkBaseDevice* init(SkBaseDevice*);
+
+    /**
+     *  DEPRECATED
+     *
+     *  Specify a device for this canvas to draw into. If it is not null, its
+     *  reference count is incremented. If the canvas was already holding a
+     *  device, its reference count is decremented. The new device is returned.
+     */
+    SkBaseDevice* setRootDevice(SkBaseDevice* device);
+
 
     // internal methods are not virtual, so they can safely be called by other
     // canvas apis, without confusing subclasses (like SkPictureRecording)
@@ -1258,10 +1270,10 @@ public:
 
     // returns NULL on failure
     const void* addr() const { return fAddr; }
-    
+
     // undefined if addr() == NULL
     size_t rowBytes() const { return fRowBytes; }
-    
+
     // undefined if addr() == NULL
     const SkImageInfo& info() const { return fInfo; }
 
