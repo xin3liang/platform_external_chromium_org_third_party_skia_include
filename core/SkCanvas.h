@@ -49,6 +49,35 @@ public:
     SK_DECLARE_INST_COUNT(SkCanvas)
 
     /**
+     *  Attempt to allocate an offscreen raster canvas, matching the ImageInfo.
+     *  On success, return a new canvas that will draw into that offscreen.
+     *
+     *  The caller can access the pixels after drawing into this canvas by
+     *  calling readPixels() or peekPixels().
+     *
+     *  If the requested ImageInfo is opaque (either the colortype is
+     *  intrinsically opaque like RGB_565, or the info's alphatype is kOpaque)
+     *  then the pixel memory may be uninitialized. Otherwise, the pixel memory
+     *  will be initialized to 0, which is interpreted as transparent.
+     *
+     *  On failure, return NULL. This can fail for several reasons:
+     *  1. the memory allocation failed (e.g. request is too large)
+     *  2. invalid ImageInfo (e.g. negative dimensions)
+     *  3. unsupported ImageInfo for a canvas
+     *      - kUnknown_SkColorType, kIndex_8_SkColorType
+     *      - kIgnore_SkAlphaType
+     *      - this list is not complete, so others may also be unsupported
+     *
+     *  Note: it is valid to request a supported ImageInfo, but with zero
+     *  dimensions.
+     */
+    static SkCanvas* NewRaster(const SkImageInfo&);
+
+    static SkCanvas* NewRasterN32(int width, int height) {
+        return NewRaster(SkImageInfo::MakeN32Premul(width, height));
+    }
+
+    /**
      *  Creates an empty canvas with no backing device/pixels, and zero
      *  dimensions.
      */
@@ -939,7 +968,26 @@ public:
         // do nothing. Subclasses may do something
     }
 
+    /**
+     *  With this call the client asserts that subsequent draw operations (up to the
+     *  matching popCull()) are fully contained within the given bounding box. The assertion
+     *  is not enforced, but the information might be used to quick-reject command blocks,
+     *  so an incorrect bounding box may result in incomplete rendering.
+     */
+    void pushCull(const SkRect& cullRect) {
+        ++fCullCount;
+        this->onPushCull(cullRect);
+    }
 
+    /**
+     *  Terminates the current culling block, and restores the previous one (if any).
+     */
+    void popCull() {
+        if (fCullCount > 0) {
+            --fCullCount;
+            this->onPopCull();
+        }
+    }
     //////////////////////////////////////////////////////////////////////////
 
     /** Get the current bounder object.
@@ -1105,6 +1153,9 @@ protected:
     // can perform copy-on-write or invalidate any cached images
     void predrawNotify();
 
+    virtual void onPushCull(const SkRect& cullRect);
+    virtual void onPopCull();
+
 private:
     class MCRec;
 
@@ -1117,6 +1168,7 @@ private:
 
     SkBounder*  fBounder;
     int         fSaveLayerCount;    // number of successful saveLayer calls
+    int         fCullCount;         // number of active culls
 
     SkMetaData* fMetaData;
 
