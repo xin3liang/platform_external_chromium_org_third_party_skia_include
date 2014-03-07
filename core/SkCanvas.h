@@ -18,6 +18,8 @@
 #include "SkRegion.h"
 #include "SkXfermode.h"
 
+//#define SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
+
 class SkBounder;
 class SkBaseDevice;
 class SkDraw;
@@ -264,7 +266,9 @@ public:
      */
     bool readPixels(const SkIRect& srcRect, SkBitmap* bitmap);
 
+#ifdef SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
     /**
+     *  DEPRECATED
      *  Similar to draw sprite, this method will copy the pixels in bitmap onto
      *  the canvas, with the top/left corner specified by (x, y). The canvas'
      *  pixel values are completely replaced: there is no blending.
@@ -279,9 +283,34 @@ public:
      *  Note: If you are recording drawing commands on this canvas to
      *  SkPicture, writePixels() is ignored!
      */
-    void writePixels(const SkBitmap& bitmap,
-                     int x, int y,
-                     Config8888 config8888 = kNative_Premul_Config8888);
+    void writePixels(const SkBitmap& bitmap, int x, int y, Config8888 config8888);
+#endif
+
+    /**
+     *  This method affects the pixels in the base-layer, and operates in pixel coordinates,
+     *  ignoring the matrix and clip.
+     *
+     *  The specified ImageInfo and (x,y) offset specifies a rectangle: target.
+     *
+     *      target.setXYWH(x, y, info.width(), info.height());
+     *
+     *  Target is intersected with the bounds of the base-layer. If this intersection is not empty,
+     *  then we have two sets of pixels (of equal size), the "src" specified by info+pixels+rowBytes
+     *  and the "dst" by the canvas' backend. Replace the dst pixels with the corresponding src
+     *  pixels, performing any colortype/alphatype transformations needed (in the case where the
+     *  src and dst have different colortypes or alphatypes).
+     *
+     *  This call can fail, returning false, for several reasons:
+     *  - If the src colortype/alphatype cannot be converted to the canvas' types
+     *  - If this canvas is not backed by pixels (e.g. picture or PDF)
+     */
+    bool writePixels(const SkImageInfo&, const void* pixels, size_t rowBytes, int x, int y);
+
+    /**
+     *  Helper for calling writePixels(info, ...) by passing its pixels and rowbytes. If the bitmap
+     *  is just wrapping a texture, returns false and does nothing.
+     */
+    bool writePixels(const SkBitmap& bitmap, int x, int y);
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -423,33 +452,30 @@ public:
      *  @param rect The rect to combine with the current clip
      *  @param op The region op to apply to the current clip
      *  @param doAntiAlias true if the clip should be antialiased
-     *  @return true if the canvas' clip is non-empty
      */
-    virtual bool clipRect(const SkRect& rect,
-                          SkRegion::Op op = SkRegion::kIntersect_Op,
-                          bool doAntiAlias = false);
+    void clipRect(const SkRect& rect,
+                  SkRegion::Op op = SkRegion::kIntersect_Op,
+                  bool doAntiAlias = false);
 
     /**
      *  Modify the current clip with the specified SkRRect.
      *  @param rrect The rrect to combine with the current clip
      *  @param op The region op to apply to the current clip
      *  @param doAntiAlias true if the clip should be antialiased
-     *  @return true if the canvas' clip is non-empty
      */
-    virtual bool clipRRect(const SkRRect& rrect,
-                           SkRegion::Op op = SkRegion::kIntersect_Op,
-                           bool doAntiAlias = false);
+    void clipRRect(const SkRRect& rrect,
+                   SkRegion::Op op = SkRegion::kIntersect_Op,
+                   bool doAntiAlias = false);
 
     /**
      *  Modify the current clip with the specified path.
      *  @param path The path to combine with the current clip
      *  @param op The region op to apply to the current clip
      *  @param doAntiAlias true if the clip should be antialiased
-     *  @return true if the canvas' new clip is non-empty
      */
-    virtual bool clipPath(const SkPath& path,
-                          SkRegion::Op op = SkRegion::kIntersect_Op,
-                          bool doAntiAlias = false);
+    void clipPath(const SkPath& path,
+                  SkRegion::Op op = SkRegion::kIntersect_Op,
+                  bool doAntiAlias = false);
 
     /** EXPERIMENTAL -- only used for testing
         Set to false to force clips to be hard, even if doAntiAlias=true is
@@ -472,10 +498,9 @@ public:
         coordinates, and so no transformation is performed.
         @param deviceRgn    The region to apply to the current clip
         @param op The region op to apply to the current clip
-        @return true if the canvas' new clip is non-empty
     */
-    virtual bool clipRegion(const SkRegion& deviceRgn,
-                            SkRegion::Op op = SkRegion::kIntersect_Op);
+    void clipRegion(const SkRegion& deviceRgn,
+                    SkRegion::Op op = SkRegion::kIntersect_Op);
 
     /** Helper for clipRegion(rgn, kReplace_Op). Sets the current clip to the
         specified region. This does not intersect or in any other way account
@@ -1155,7 +1180,7 @@ protected:
 
     // Called by child classes that override clipPath and clipRRect to only
     // track fast conservative clip bounds, rather than exact clips.
-    bool updateClipConservativelyUsingBounds(const SkRect&, SkRegion::Op,
+    void updateClipConservativelyUsingBounds(const SkRect&, SkRegion::Op,
                                              bool inverseFilled);
 
     // notify our surface (if we have one) that we are about to draw, so it
