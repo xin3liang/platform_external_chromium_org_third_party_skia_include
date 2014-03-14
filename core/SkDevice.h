@@ -138,6 +138,8 @@ public:
 
     bool writePixelsDirect(const SkImageInfo&, const void*, size_t rowBytes, int x, int y);
 
+    void* accessPixels(SkImageInfo* info, size_t* rowBytes);
+
     /**
      * Return the device's associated gpu render target, or NULL.
      */
@@ -336,17 +338,6 @@ protected:
     */
     virtual const SkBitmap& onAccessBitmap() = 0;
 
-    /**
-     * Implements readPixels API. The caller will ensure that:
-     *  1. bitmap has pixel config kARGB_8888_Config.
-     *  2. bitmap has pixels.
-     *  3. The rectangle (x, y, x + bitmap->width(), y + bitmap->height()) is
-     *     contained in the device bounds.
-     */
-    virtual bool onReadPixels(const SkBitmap& bitmap,
-                              int x, int y,
-                              SkCanvas::Config8888 config8888) = 0;
-
     /** Called when this device is installed into a Canvas. Balanced by a call
         to unlockPixels() when the device is removed from a Canvas.
     */
@@ -392,12 +383,28 @@ protected:
     virtual const void* peekPixels(SkImageInfo*, size_t* rowBytes);
 
     /**
+     * Implements readPixels API. The caller will ensure that:
+     *  1. bitmap has pixel config kARGB_8888_Config.
+     *  2. bitmap has pixels.
+     *  3. The rectangle (x, y, x + bitmap->width(), y + bitmap->height()) is
+     *     contained in the device bounds.
+     */
+    virtual bool onReadPixels(const SkBitmap& bitmap,
+                              int x, int y,
+                              SkCanvas::Config8888 config8888);
+
+    /**
      *  The caller is responsible for "pre-clipping" the src. The impl can assume that the src
      *  image at the specified x,y offset will fit within the device's bounds.
      *
      *  This is explicitly asserted in writePixelsDirect(), the public way to call this.
      */
     virtual bool onWritePixels(const SkImageInfo&, const void*, size_t, int x, int y);
+
+    /**
+     *  Default impl returns NULL.
+     */
+    virtual void* onAccessPixels(SkImageInfo* info, size_t* rowBytes);
 
     /**
      *  Leaky properties are those which the device should be applying but it isn't.
@@ -414,7 +421,7 @@ private:
     friend class SkDrawIter;
     friend class SkDeviceFilteredPaint;
     friend class SkDeviceImageFilterProxy;
-    friend class DeferredDevice;    // for newSurface
+    friend class SkDeferredDevice;    // for newSurface
 
     friend class SkSurface_Raster;
 
