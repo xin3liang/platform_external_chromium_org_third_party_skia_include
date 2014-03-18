@@ -124,27 +124,7 @@ public:
     */
     const SkBitmap& accessBitmap(bool changePixels);
 
-#ifdef SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
-    /**
-     *  DEPRECATED: This will be made protected once WebKit stops using it.
-     *              Instead use Canvas' writePixels method.
-     *
-     *  Similar to draw sprite, this method will copy the pixels in bitmap onto
-     *  the device, with the top/left corner specified by (x, y). The pixel
-     *  values in the device are completely replaced: there is no blending.
-     *
-     *  Currently if bitmap is backed by a texture this is a no-op. This may be
-     *  relaxed in the future.
-     *
-     *  If the bitmap has config kARGB_8888_Config then the config8888 param
-     *  will determines how the pixel valuess are intepreted. If the bitmap is
-     *  not kARGB_8888_Config then this parameter is ignored.
-     */
-    virtual void writePixels(const SkBitmap& bitmap, int x, int y,
-                             SkCanvas::Config8888 config8888 = SkCanvas::kNative_Premul_Config8888);
-#endif
-
-    bool writePixelsDirect(const SkImageInfo&, const void*, size_t rowBytes, int x, int y);
+    bool writePixels(const SkImageInfo&, const void*, size_t rowBytes, int x, int y);
 
     void* accessPixels(SkImageInfo* info, size_t* rowBytes);
 
@@ -307,6 +287,7 @@ protected:
     virtual void drawDevice(const SkDraw&, SkBaseDevice*, int x, int y,
                             const SkPaint&) = 0;
 
+#ifdef SK_SUPPORT_LEGACY_READPIXELSCONFIG
     /**
      *  On success (returns true), copy the device pixels into the bitmap.
      *  On failure, the bitmap parameter is left unchanged and false is
@@ -337,6 +318,8 @@ protected:
     bool readPixels(SkBitmap* bitmap,
                     int x, int y,
                     SkCanvas::Config8888 config8888);
+#endif
+    bool readPixels(const SkImageInfo&, void* dst, size_t rowBytes, int x, int y);
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -398,9 +381,17 @@ protected:
      *  3. The rectangle (x, y, x + bitmap->width(), y + bitmap->height()) is
      *     contained in the device bounds.
      */
-    virtual bool onReadPixels(const SkBitmap& bitmap,
-                              int x, int y,
-                              SkCanvas::Config8888 config8888);
+#ifdef SK_SUPPORT_LEGACY_READPIXELSCONFIG
+    virtual bool onReadPixels(const SkBitmap& bitmap, int x, int y, SkCanvas::Config8888);
+#endif
+
+    /**
+     *  The caller is responsible for "pre-clipping" the dst. The impl can assume that the dst
+     *  image at the specified x,y offset will fit within the device's bounds.
+     *
+     *  This is explicitly asserted in readPixels(), the public way to call this.
+     */
+    virtual bool onReadPixels(const SkImageInfo&, void*, size_t, int x, int y);
 
     /**
      *  The caller is responsible for "pre-clipping" the src. The impl can assume that the src
@@ -422,6 +413,24 @@ protected:
      *  for that property, effectively making it non-leaky.
      */
     SkDeviceProperties fLeakyProperties;
+
+    /**
+     *  PRIVATE / EXPERIMENTAL -- do not call
+     *  Construct an acceleration object and attach it to 'picture'
+     */
+    virtual void EXPERIMENTAL_optimize(SkPicture* picture);
+
+    /**
+     *  PRIVATE / EXPERIMENTAL -- do not call
+     *  This entry point gives the backend an opportunity to take over the rendering
+     *  of 'picture'. If optimization data is available (due to an earlier
+     *  'optimize' call) this entry point should make use of it and return true
+     *  if all rendering has been done. If false is returned, SkCanvas will
+     *  perform its own rendering pass. It is acceptable for the backend
+     *  to perform some device-specific warm up tasks and then let SkCanvas
+     *  perform the main rendering loop (by return false from here).
+     */
+    virtual bool EXPERIMENTAL_drawPicture(const SkPicture& picture);
 
 private:
     friend class SkCanvas;

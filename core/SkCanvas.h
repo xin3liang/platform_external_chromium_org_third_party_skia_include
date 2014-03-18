@@ -18,11 +18,12 @@
 #include "SkRegion.h"
 #include "SkXfermode.h"
 
+//#define SK_SUPPORT_LEGACY_READPIXELSCONFIG
+
 // if not defined, we always assume ClipToLayer for saveLayer()
 //#define SK_SUPPORT_LEGACY_CLIPTOLAYERFLAG
 
 
-//#define SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
 //#define SK_SUPPORT_LEGACY_GETCLIPTYPE
 //#define SK_SUPPORT_LEGACY_GETTOTALCLIP
 //#define SK_SUPPORT_LEGACY_GETTOPDEVICE
@@ -85,6 +86,27 @@ public:
 
     static SkCanvas* NewRasterN32(int width, int height) {
         return NewRaster(SkImageInfo::MakeN32Premul(width, height));
+    }
+
+    /**
+     *  Attempt to allocate raster canvas, matching the ImageInfo, that will draw directly into the
+     *  specified pixels. To access the pixels after drawing to them, the caller should call
+     *  flush() or call peekPixels(...).
+     *
+     *  On failure, return NULL. This can fail for several reasons:
+     *  1. invalid ImageInfo (e.g. negative dimensions)
+     *  2. unsupported ImageInfo for a canvas
+     *      - kUnknown_SkColorType, kIndex_8_SkColorType
+     *      - kIgnore_SkAlphaType
+     *      - this list is not complete, so others may also be unsupported
+     *
+     *  Note: it is valid to request a supported ImageInfo, but with zero
+     *  dimensions.
+     */
+    static SkCanvas* NewRasterDirect(const SkImageInfo&, void*, size_t);
+
+    static SkCanvas* NewRasterDirectN32(int width, int height, SkPMColor* pixels, size_t rowBytes) {
+        return NewRasterDirect(SkImageInfo::MakeN32Premul(width, height), pixels, rowBytes);
     }
 
     /**
@@ -244,6 +266,7 @@ public:
         kRGBA_Unpremul_Config8888
     };
 
+#ifdef SK_SUPPORT_LEGACY_READPIXELSCONFIG
     /**
      *  On success (returns true), copy the canvas pixels into the bitmap.
      *  On failure, the bitmap parameter is left unchanged and false is
@@ -280,37 +303,44 @@ public:
      *       // use the pixels
      *    }
      */
-    bool readPixels(SkBitmap* bitmap,
-                    int x, int y,
-                    Config8888 config8888 = kNative_Premul_Config8888);
+    bool readPixels(SkBitmap* bitmap, int x, int y, Config8888 config8888);
+#endif
 
     /**
-     * DEPRECATED: This will be removed as soon as webkit is no longer relying
-     * on it. The bitmap is resized to the intersection of srcRect and the
-     * canvas bounds. New pixels are always allocated on success. Bitmap is
-     * unmodified on failure.
+     *  Copy the pixels from the base-layer into the specified buffer (pixels + rowBytes),
+     *  converting them into the requested format (SkImageInfo). The base-layer pixels are read
+     *  starting at the specified (x,y) location in the coordinate system of the base-layer.
+     *
+     *  The specified ImageInfo and (x,y) offset specifies a source rectangle
+     *
+     *      srcR(x, y, info.width(), info.height());
+     *
+     *  SrcR is intersected with the bounds of the base-layer. If this intersection is not empty,
+     *  then we have two sets of pixels (of equal size), the "src" specified by base-layer at (x,y)
+     *  and the "dst" by info+pixels+rowBytes. Replace the dst pixels with the corresponding src
+     *  pixels, performing any colortype/alphatype transformations needed (in the case where the
+     *  src and dst have different colortypes or alphatypes).
+     *
+     *  This call can fail, returning false, for several reasons:
+     *  - If the requested colortype/alphatype cannot be converted from the base-layer's types.
+     *  - If this canvas is not backed by pixels (e.g. picture or PDF)
+     */
+    bool readPixels(const SkImageInfo&, void* pixels, size_t rowBytes, int x, int y);
+
+    /**
+     *  Helper for calling readPixels(info, ...). This call will check if bitmap has been allocated.
+     *  If not, it will attempt to call allocPixels(). If this fails, it will return false. If not,
+     *  it calls through to readPixels(info, ...) and returns its result.
+     */
+    bool readPixels(SkBitmap* bitmap, int x, int y);
+
+    /**
+     *  Helper for allocating pixels and then calling readPixels(info, ...). The bitmap is resized
+     *  to the intersection of srcRect and the base-layer bounds. On success, pixels will be
+     *  allocated in bitmap and true returned. On failure, false is returned and bitmap will be
+     *  set to empty.
      */
     bool readPixels(const SkIRect& srcRect, SkBitmap* bitmap);
-
-#ifdef SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
-    /**
-     *  DEPRECATED
-     *  Similar to draw sprite, this method will copy the pixels in bitmap onto
-     *  the canvas, with the top/left corner specified by (x, y). The canvas'
-     *  pixel values are completely replaced: there is no blending.
-     *
-     *  Currently if bitmap is backed by a texture this is a no-op. This may be
-     *  relaxed in the future.
-     *
-     *  If the bitmap has config kARGB_8888_Config then the config8888 param
-     *  will determines how the pixel valuess are intepreted. If the bitmap is
-     *  not kARGB_8888_Config then this parameter is ignored.
-     *
-     *  Note: If you are recording drawing commands on this canvas to
-     *  SkPicture, writePixels() is ignored!
-     */
-    void writePixels(const SkBitmap& bitmap, int x, int y, Config8888 config8888);
-#endif
 
     /**
      *  This method affects the pixels in the base-layer, and operates in pixel coordinates,
@@ -440,35 +470,30 @@ public:
     /** Preconcat the current matrix with the specified translation
         @param dx   The distance to translate in X
         @param dy   The distance to translate in Y
-        returns true if the operation succeeded (e.g. did not overflow)
     */
-    bool translate(SkScalar dx, SkScalar dy);
+    void translate(SkScalar dx, SkScalar dy);
 
     /** Preconcat the current matrix with the specified scale.
         @param sx   The amount to scale in X
         @param sy   The amount to scale in Y
-        returns true if the operation succeeded (e.g. did not overflow)
     */
-    bool scale(SkScalar sx, SkScalar sy);
+    void scale(SkScalar sx, SkScalar sy);
 
     /** Preconcat the current matrix with the specified rotation.
         @param degrees  The amount to rotate, in degrees
-        returns true if the operation succeeded (e.g. did not overflow)
     */
-    bool rotate(SkScalar degrees);
+    void rotate(SkScalar degrees);
 
     /** Preconcat the current matrix with the specified skew.
         @param sx   The amount to skew in X
         @param sy   The amount to skew in Y
-        returns true if the operation succeeded (e.g. did not overflow)
     */
-    bool skew(SkScalar sx, SkScalar sy);
+    void skew(SkScalar sx, SkScalar sy);
 
     /** Preconcat the current matrix with the specified matrix.
         @param matrix   The matrix to preconcatenate with the current matrix
-        @return true if the operation succeeded (e.g. did not overflow)
     */
-    bool concat(const SkMatrix& matrix);
+    void concat(const SkMatrix& matrix);
 
     /** Replace the current matrix with a copy of the specified matrix.
         @param matrix The matrix that will be copied into the current matrix.
@@ -961,6 +986,14 @@ public:
     virtual void drawTextOnPath(const void* text, size_t byteLength,
                                 const SkPath& path, const SkMatrix* matrix,
                                 const SkPaint& paint);
+
+    /** PRIVATE / EXPERIMENTAL -- do not call
+        Perform back-end analysis/optimization of a picture. This may attach
+        optimization data to the picture which can be used by a later
+        drawPicture call.
+        @param picture The recorded drawing commands to analyze/optimize
+    */
+    void EXPERIMENTAL_optimize(SkPicture* picture);
 
     /** Draw the picture into this canvas. This method effective brackets the
         playback of the picture's draw calls with save/restore, so the state
