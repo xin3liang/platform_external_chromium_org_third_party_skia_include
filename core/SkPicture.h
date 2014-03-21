@@ -34,6 +34,27 @@ class SK_API SkPicture : public SkRefCnt {
 public:
     SK_DECLARE_INST_COUNT(SkPicture)
 
+    // AccelData provides a base class for device-specific acceleration
+    // data. It is added to the picture via a call to a device's optimize
+    // method.
+    class AccelData : public SkRefCnt {
+    public:
+        typedef uint8_t Domain;
+        typedef uint32_t Key;
+
+        AccelData(Key key) : fKey(key) { }
+
+        const Key& getKey() const { return fKey; }
+
+        // This entry point allows user's to get a unique domain prefix
+        // for their keys
+        static Domain GenerateDomain();
+    private:
+        Key fKey;
+
+        typedef SkRefCnt INHERITED;
+    };
+
     /** The constructor prepares the picture to record.
         @param width the width of the virtual device the picture records.
         @param height the height of the virtual device the picture records.
@@ -43,6 +64,18 @@ public:
         this call, those elements will not appear in this picture.
     */
     SkPicture(const SkPicture& src);
+
+    /**  PRIVATE / EXPERIMENTAL -- do not call */
+    void EXPERIMENTAL_addAccelData(const AccelData* data) {
+        SkRefCnt_SafeAssign(fAccelData, data);
+    }
+    /**  PRIVATE / EXPERIMENTAL -- do not call */
+    const AccelData* EXPERIMENTAL_getAccelData(AccelData::Key key) const {
+        if (NULL != fAccelData && fAccelData->getKey() == key) {
+            return fAccelData;
+        }
+        return NULL;
+    }
 
     /**
      *  Function signature defining a function that sets up an SkBitmap from encoded data. On
@@ -262,9 +295,10 @@ protected:
     // fPlayback, fRecord, fWidth & fHeight are protected to allow derived classes to
     // install their own SkPicturePlayback-derived players,SkPictureRecord-derived
     // recorders and set the picture size
-    SkPicturePlayback* fPlayback;
-    SkPictureRecord* fRecord;
-    int fWidth, fHeight;
+    SkPicturePlayback*    fPlayback;
+    SkPictureRecord*      fRecord;
+    int                   fWidth, fHeight;
+    const AccelData*      fAccelData;
 
     // Create a new SkPicture from an existing SkPicturePlayback. Ref count of
     // playback is unchanged.
@@ -274,11 +308,41 @@ protected:
     // SkBBoxHierarchy implementation
     virtual SkBBoxHierarchy* createBBoxHierarchy() const;
 private:
+    // An OperationList encapsulates a set of operation offsets into the picture byte
+    // stream along with the CTMs needed for those operation.
+    class OperationList : public SkNoncopyable {
+    public:
+        virtual ~OperationList() {}
+
+        // If valid returns false then there is no optimization data
+        // present. All the draw operations need to be issued.
+        virtual bool valid() const { return false; }
+
+        // The following three entry points should only be accessed if
+        // 'valid' returns true.
+        virtual int numOps() const { SkASSERT(false); return 0; };
+        // The offset in the picture of the operation to execute.
+        virtual uint32_t offset(int index) const { SkASSERT(false); return 0; };
+        // The CTM that must be installed for the operation to behave correctly
+        virtual const SkMatrix& matrix(int index) const { SkASSERT(false); return SkMatrix::I(); }
+
+        static const OperationList& InvalidList();
+
+    private:
+        typedef SkNoncopyable INHERITED;
+    };
+
+    /** PRIVATE / EXPERIMENTAL -- do not call
+        Return the operations required to render the content inside 'queryRect'.
+    */
+    const OperationList& EXPERIMENTAL_getActiveOps(const SkIRect& queryRect);
+
     void createHeader(SkPictInfo* info) const;
     static bool IsValidPictInfo(const SkPictInfo& info);
 
     friend class SkFlatPicture;
     friend class SkPicturePlayback;
+    friend class SkGpuDevice;
 
     typedef SkRefCnt INHERITED;
 };

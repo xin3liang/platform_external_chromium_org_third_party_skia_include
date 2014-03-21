@@ -14,6 +14,7 @@
 #include "SkGr.h"
 #include "SkBitmap.h"
 #include "SkBitmapDevice.h"
+#include "SkPicture.h"
 #include "SkRegion.h"
 #include "GrContext.h"
 
@@ -87,10 +88,6 @@ public:
     virtual SkBitmap::Config config() const SK_OVERRIDE;
 
     virtual void clear(SkColor color) SK_OVERRIDE;
-#ifdef SK_SUPPORT_LEGACY_WRITEPIXELSCONFIG
-    virtual void writePixels(const SkBitmap& bitmap, int x, int y,
-                             SkCanvas::Config8888 config8888) SK_OVERRIDE;
-#endif
     virtual void drawPaint(const SkDraw&, const SkPaint& paint) SK_OVERRIDE;
     virtual void drawPoints(const SkDraw&, SkCanvas::PointMode mode, size_t count,
                             const SkPoint[], const SkPaint& paint) SK_OVERRIDE;
@@ -146,9 +143,18 @@ public:
 
     class SkAutoCachedTexture; // used internally
 
+
 protected:
+#ifdef SK_SUPPORT_LEGACY_READPIXELSCONFIG
     virtual bool onReadPixels(const SkBitmap&, int x, int y, SkCanvas::Config8888) SK_OVERRIDE;
+#endif
+    virtual bool onReadPixels(const SkImageInfo&, void*, size_t, int, int) SK_OVERRIDE;
     virtual bool onWritePixels(const SkImageInfo&, const void*, size_t, int, int) SK_OVERRIDE;
+
+    /**  PRIVATE / EXPERIMENTAL -- do not call */
+    virtual void EXPERIMENTAL_optimize(SkPicture* picture) SK_OVERRIDE;
+    /**  PRIVATE / EXPERIMENTAL -- do not call */
+    virtual bool EXPERIMENTAL_drawPicture(const SkPicture& picture) SK_OVERRIDE;
 
 private:
     GrContext*      fContext;
@@ -214,6 +220,8 @@ private:
                          SkCanvas::DrawBitmapRectFlags flags,
                          int tileSize,
                          bool bicubic);
+
+    static SkPicture::AccelData::Key ComputeAccelDataKey();
 
     typedef SkBitmapDevice INHERITED;
 };
