@@ -488,8 +488,8 @@ public:
     void drawVertices(const GrPaint& paint,
                       GrPrimitiveType primitiveType,
                       int vertexCount,
-                      const GrPoint positions[],
-                      const GrPoint texs[],
+                      const SkPoint positions[],
+                      const SkPoint texs[],
                       const GrColor colors[],
                       const uint16_t indices[],
                       int indexCount);
@@ -653,7 +653,13 @@ public:
      * perform a resolve to a GrTexture used as the source of a draw or before
      * reading pixels back from a GrTexture or GrRenderTarget.
      */
-    void resolveRenderTarget(GrRenderTarget* target);
+    void resolveRenderTarget(GrRenderTarget*);
+
+    /**
+     * Provides a perfomance hint that the render target's contents are allowed
+     * to become undefined.
+     */
+    void discardRenderTarget(GrRenderTarget*);
 
 #ifdef SK_DEVELOPER
     void dumpFontCache() const;
