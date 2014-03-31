@@ -111,6 +111,11 @@ public:
      */
     size_t getGpuTextureCacheBytes() const;
 
+    /**
+     * Returns the number of resources hosted by the texture cache.
+     */
+    int getGpuTextureCacheResourceCount() const;
+
     ///////////////////////////////////////////////////////////////////////////
     // Textures
 
@@ -855,6 +860,11 @@ public:
     // Called by tests that draw directly to the context via GrDrawTarget
     void getTestTarget(GrTestTarget*);
 
+    // Functions for managing gpu trace markers
+    bool isGpuTracingEnabled() const { return fGpuTracingEnabled; }
+    void enableGpuTracing() { fGpuTracingEnabled = true; }
+    void disableGpuTracing() { fGpuTracingEnabled = false; }
+
     /**
      * Stencil buffers add themselves to the cache using addStencilBuffer. findStencilBuffer is
      * called to check the cache for a SB that matches an RT's criteria.
@@ -917,6 +927,8 @@ private:
     SkTDArray<CleanUpData>          fCleanUpData;
 
     int                             fMaxTextureSizeOverride;
+
+    bool                            fGpuTracingEnabled;
 
     GrContext(); // init must be called after the constructor.
     bool init(GrBackend, GrBackendContext);
