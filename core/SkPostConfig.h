@@ -166,12 +166,14 @@
 #  endif
 #
 #else
-#  ifdef SK_DEBUG
-#    include <stdio.h>
-#    ifndef SK_DEBUGBREAK
+#  ifndef SK_DEBUGBREAK
+#    ifdef SK_DEBUG
+#      include <stdio.h>
 #      define SK_DEBUGBREAK(cond) do { if (cond) break; \
                 SkDebugf("%s:%d: failed assertion \"%s\"\n", \
                 __FILE__, __LINE__, #cond); SK_CRASH(); } while (false)
+#    else
+#      define SK_DEBUGBREAK(cond) do { if (cond) break; SK_CRASH(); } while (false)
 #    endif
 #  endif
 #endif
@@ -389,6 +391,17 @@
 #  else
 #    define SK_MUTEX_PLATFORM_H "../../src/ports/SkMutex_pthread.h"
 #  endif
+#endif
+
+
+//////////////////////////////////////////////////////////////////////
+
+#if defined(SK_GAMMA_EXPONENT) && defined(SK_GAMMA_SRGB)
+#  error "cannot define both SK_GAMMA_EXPONENT and SK_GAMMA_SRGB"
+#elif defined(SK_GAMMA_SRGB)
+#  define SK_GAMMA_EXPONENT (0.0f)
+#elif !defined(SK_GAMMA_EXPONENT)
+#  define SK_GAMMA_EXPONENT (2.2f)
 #endif
 
 #endif // SkPostConfig_DEFINED

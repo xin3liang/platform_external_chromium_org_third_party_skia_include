@@ -91,6 +91,8 @@ public:
                           const SkPaint& paint) SK_OVERRIDE;
     virtual void drawRRect(const SkDraw&, const SkRRect& r,
                            const SkPaint& paint) SK_OVERRIDE;
+    virtual void drawDRRect(const SkDraw& draw, const SkRRect& outer,
+                            const SkRRect& inner, const SkPaint& paint) SK_OVERRIDE;
     virtual void drawOval(const SkDraw&, const SkRect& oval,
                           const SkPaint& paint) SK_OVERRIDE;
     virtual void drawPath(const SkDraw&, const SkPath& path,
@@ -149,7 +151,9 @@ protected:
     /**  PRIVATE / EXPERIMENTAL -- do not call */
     virtual void EXPERIMENTAL_optimize(SkPicture* picture) SK_OVERRIDE;
     /**  PRIVATE / EXPERIMENTAL -- do not call */
-    virtual bool EXPERIMENTAL_drawPicture(SkPicture* picture) SK_OVERRIDE;
+    virtual void EXPERIMENTAL_purge(SkPicture* picture) SK_OVERRIDE;
+    /**  PRIVATE / EXPERIMENTAL -- do not call */
+    virtual bool EXPERIMENTAL_drawPicture(SkCanvas* canvas, SkPicture* picture) SK_OVERRIDE;
 
 private:
     GrContext*      fContext;
