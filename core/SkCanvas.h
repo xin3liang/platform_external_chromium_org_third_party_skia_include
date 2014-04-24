@@ -26,6 +26,13 @@
 //#define SK_SUPPORT_LEGACY_GETTOTALCLIP
 //#define SK_SUPPORT_LEGACY_GETTOPDEVICE
 
+//#define SK_SUPPORT_LEGACY_DRAWTEXT_VIRTUAL
+#ifdef SK_SUPPORT_LEGACY_DRAWTEXT_VIRTUAL
+    #define SK_LEGACY_DRAWTEXT_VIRTUAL  virtual
+#else
+    #define SK_LEGACY_DRAWTEXT_VIRTUAL
+#endif
+
 class SkBounder;
 class SkBaseDevice;
 class SkDraw;
@@ -206,15 +213,14 @@ public:
      *  If the canvas has writable pixels in its top layer (and is not recording to a picture
      *  or other non-raster target) and has direct access to its pixels (i.e. they are in
      *  local RAM) return the address of those pixels, and if not null,
-     *  return the ImageInfo and rowBytes. The returned address is only valid
+     *  return the ImageInfo, rowBytes and origin. The returned address is only valid
      *  while the canvas object is in scope and unchanged. Any API calls made on
      *  canvas (or its parent surface if any) will invalidate the
      *  returned address (and associated information).
      *
-     *  On failure, returns NULL and the info and rowBytes parameters are
-     *  ignored.
+     *  On failure, returns NULL and the info, rowBytes, and origin parameters are ignored.
      */
-    void* accessTopLayerPixels(SkImageInfo* info, size_t* rowBytes);
+    void* accessTopLayerPixels(SkImageInfo* info, size_t* rowBytes, SkIPoint* origin = NULL);
 
     /**
      *  If the canvas has readable pixels in its base layer (and is not recording to a picture
@@ -869,7 +875,7 @@ public:
         @param y        The y-coordinate of the origin of the text being drawn
         @param paint    The paint used for the text (e.g. color, size, style)
     */
-    virtual void drawText(const void* text, size_t byteLength, SkScalar x,
+    SK_LEGACY_DRAWTEXT_VIRTUAL void drawText(const void* text, size_t byteLength, SkScalar x,
                           SkScalar y, const SkPaint& paint);
 
     /** Draw the text, with each character/glyph origin specified by the pos[]
@@ -879,7 +885,7 @@ public:
         @param pos      Array of positions, used to position each character
         @param paint    The paint used for the text (e.g. color, size, style)
         */
-    virtual void drawPosText(const void* text, size_t byteLength,
+    SK_LEGACY_DRAWTEXT_VIRTUAL void drawPosText(const void* text, size_t byteLength,
                              const SkPoint pos[], const SkPaint& paint);
 
     /** Draw the text, with each character/glyph origin specified by the x
@@ -891,7 +897,7 @@ public:
         @param constY   The shared Y coordinate for all of the positions
         @param paint    The paint used for the text (e.g. color, size, style)
         */
-    virtual void drawPosTextH(const void* text, size_t byteLength,
+    SK_LEGACY_DRAWTEXT_VIRTUAL void drawPosTextH(const void* text, size_t byteLength,
                               const SkScalar xpos[], SkScalar constY,
                               const SkPaint& paint);
 
@@ -921,7 +927,7 @@ public:
                             mapped onto the path
         @param paint        The paint used for the text
         */
-    virtual void drawTextOnPath(const void* text, size_t byteLength,
+    SK_LEGACY_DRAWTEXT_VIRTUAL void drawTextOnPath(const void* text, size_t byteLength,
                                 const SkPath& path, const SkMatrix* matrix,
                                 const SkPaint& paint);
 
@@ -1186,6 +1192,20 @@ protected:
     virtual void didSetMatrix(const SkMatrix&);
 
     virtual void onDrawDRRect(const SkRRect&, const SkRRect&, const SkPaint&);
+
+    virtual void onDrawText(const void* text, size_t byteLength, SkScalar x,
+                            SkScalar y, const SkPaint& paint);
+    
+    virtual void onDrawPosText(const void* text, size_t byteLength,
+                               const SkPoint pos[], const SkPaint& paint);
+    
+    virtual void onDrawPosTextH(const void* text, size_t byteLength,
+                                const SkScalar xpos[], SkScalar constY,
+                                const SkPaint& paint);
+    
+    virtual void onDrawTextOnPath(const void* text, size_t byteLength,
+                                  const SkPath& path, const SkMatrix* matrix,
+                                  const SkPaint& paint);
 
     enum ClipEdgeStyle {
         kHard_ClipEdgeStyle,
