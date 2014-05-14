@@ -72,15 +72,11 @@ public:
     }
 
 
-    virtual SkShader::Context* createContext(
-        const SkBitmap& device, const SkPaint& paint,
-        const SkMatrix& matrix, void* storage) const SK_OVERRIDE;
     virtual size_t contextSize() const SK_OVERRIDE;
 
     class PerlinNoiseShaderContext : public SkShader::Context {
     public:
-        PerlinNoiseShaderContext(const SkPerlinNoiseShader& shader, const SkBitmap& device,
-                                 const SkPaint& paint, const SkMatrix& matrix);
+        PerlinNoiseShaderContext(const SkPerlinNoiseShader& shader, const ContextRec&);
         virtual ~PerlinNoiseShaderContext() {}
 
         virtual void shadeSpan(int x, int y, SkPMColor[], int count) SK_OVERRIDE;
@@ -107,6 +103,7 @@ public:
 protected:
     SkPerlinNoiseShader(SkReadBuffer&);
     virtual void flatten(SkWriteBuffer&) const SK_OVERRIDE;
+    virtual Context* onCreateContext(const ContextRec&, void* storage) const SK_OVERRIDE;
 
 private:
     SkPerlinNoiseShader(SkPerlinNoiseShader::Type type, SkScalar baseFrequencyX,

@@ -27,19 +27,13 @@ public:
 
     virtual bool isOpaque() const SK_OVERRIDE;
 
-    virtual SkShader::Context* createContext(const SkBitmap& device,
-                                             const SkPaint& paint,
-                                             const SkMatrix& matrix,
-                                             void* storage) const SK_OVERRIDE;
-
     virtual size_t contextSize() const SK_OVERRIDE {
         return sizeof(ColorShaderContext);
     }
 
     class ColorShaderContext : public SkShader::Context {
     public:
-        ColorShaderContext(const SkColorShader& shader, const SkBitmap& device,
-                           const SkPaint& paint, const SkMatrix& matrix);
+        ColorShaderContext(const SkColorShader& shader, const ContextRec&);
 
         virtual uint32_t getFlags() const SK_OVERRIDE;
         virtual uint8_t getSpan16Alpha() const SK_OVERRIDE;
@@ -68,6 +62,7 @@ public:
 protected:
     SkColorShader(SkReadBuffer&);
     virtual void flatten(SkWriteBuffer&) const SK_OVERRIDE;
+    virtual Context* onCreateContext(const ContextRec&, void* storage) const SK_OVERRIDE;
 
 private:
     SkColor     fColor;         // ignored if fInheritColor is true

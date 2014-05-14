@@ -20,6 +20,7 @@
 
 class GrAARectRenderer;
 class GrAutoScratchTexture;
+class GrCacheable;
 class GrDrawState;
 class GrDrawTarget;
 class GrEffect;
@@ -87,8 +88,8 @@ public:
      * buffer, etc. references/IDs are now invalid. Should be called even when
      * GrContext is no longer going to be used for two reasons:
      *  1) ~GrContext will not try to free the objects in the 3D API.
-     *  2) If you've created GrResources that outlive the GrContext they will
-     *     be marked as invalid (GrResource::isValid()) and won't attempt to
+     *  2) If you've created GrGpuObjects that outlive the GrContext they will
+     *     be marked as invalid (GrGpuObjects::isValid()) and won't attempt to
      *     free their underlying resource in the 3D API.
      * Content drawn since the last GrContext::flush() may be lost.
      */
@@ -898,6 +899,17 @@ public:
                     GrPathRendererChain::DrawType drawType = GrPathRendererChain::kColor_DrawType,
                     GrPathRendererChain::StencilSupport* stencilSupport = NULL);
 
+    /**
+     * Stores a custom resource in the cache, based on the specified key.
+     */
+    void addResourceToCache(const GrResourceKey&, GrCacheable*);
+
+    /**
+     * Finds a resource in the cache, based on the specified key. This is intended for use in
+     * conjunction with addResourceToCache(). The return value will be NULL if not found. The
+     * caller must balance with a call to unref().
+     */
+    GrCacheable* findAndRefCachedResource(const GrResourceKey&);
 
 #if GR_CACHE_STATS
     void printCacheStats() const;

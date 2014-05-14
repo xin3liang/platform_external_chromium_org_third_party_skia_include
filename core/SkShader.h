@@ -119,10 +119,26 @@ public:
      */
     virtual bool isOpaque() const { return false; }
 
+    /**
+     *  ContextRec acts as a parameter bundle for creating Contexts.
+     */
+    struct ContextRec {
+        ContextRec() : fDevice(NULL), fPaint(NULL), fMatrix(NULL), fLocalMatrix(NULL) {}
+        ContextRec(const SkBitmap& device, const SkPaint& paint, const SkMatrix& matrix)
+            : fDevice(&device)
+            , fPaint(&paint)
+            , fMatrix(&matrix)
+            , fLocalMatrix(NULL) {}
+
+        const SkBitmap* fDevice;        // the bitmap we are drawing into
+        const SkPaint*  fPaint;         // the current paint associated with the draw
+        const SkMatrix* fMatrix;        // the current matrix in the canvas
+        const SkMatrix* fLocalMatrix;   // optional local matrix
+    };
+
     class Context : public ::SkNoncopyable {
     public:
-        Context(const SkShader& shader, const SkBitmap& device,
-                const SkPaint& paint, const SkMatrix& matrix);
+        Context(const SkShader& shader, const ContextRec&);
 
         virtual ~Context();
 
@@ -184,39 +200,32 @@ public:
         };
         static MatrixClass ComputeMatrixClass(const SkMatrix&);
 
-        uint8_t             getPaintAlpha() const { return fPaintAlpha; }
-        const SkMatrix&     getTotalInverse() const { return fTotalInverse; }
-        MatrixClass         getInverseClass() const { return (MatrixClass)fTotalInverseClass; }
-
+        uint8_t         getPaintAlpha() const { return fPaintAlpha; }
+        const SkMatrix& getTotalInverse() const { return fTotalInverse; }
+        MatrixClass     getInverseClass() const { return (MatrixClass)fTotalInverseClass; }
+        const SkMatrix& getCTM() const { return fCTM; }
     private:
-        SkMatrix            fTotalInverse;
-        uint8_t             fPaintAlpha;
-        uint8_t             fTotalInverseClass;
+        SkMatrix    fCTM;
+        SkMatrix    fTotalInverse;
+        uint8_t     fPaintAlpha;
+        uint8_t     fTotalInverseClass;
 
         typedef SkNoncopyable INHERITED;
     };
 
     /**
-     *  Subclasses should be sure to call their INHERITED::validContext() if
-     *  they override this method.
-     */
-    virtual bool validContext(const SkBitmap& device, const SkPaint& paint,
-                              const SkMatrix& matrix, SkMatrix* totalInverse = NULL) const;
-
-    /**
      *  Create the actual object that does the shading.
-     *  Returns NULL if validContext() returns false.
      *  Size of storage must be >= contextSize.
      */
-    virtual Context* createContext(const SkBitmap& device,
-                                   const SkPaint& paint,
-                                   const SkMatrix& matrix,
-                                   void* storage) const = 0;
+    Context* createContext(const ContextRec&, void* storage) const;
 
     /**
      *  Return the size of a Context returned by createContext.
+     *
+     *  Override this if your subclass overrides createContext, to return the correct size of
+     *  your subclass' context.
      */
-    virtual size_t contextSize() const = 0;
+    virtual size_t contextSize() const;
 
     /**
      *  Helper to check the flags to know if it is legal to call shadeSpan16()
@@ -356,6 +365,11 @@ public:
     //////////////////////////////////////////////////////////////////////////
     //  Factory methods for stock shaders
 
+    /**
+     *  Call this to create a new "empty" shader, that will not draw anything.
+     */
+    static SkShader* CreateEmptyShader();
+
     /** Call this to create a new shader that will draw with the specified bitmap.
      *
      *  If the bitmap cannot be used (e.g. has no pixels, or its dimensions
@@ -384,20 +398,26 @@ public:
      *  @param tmy  The tiling mode to use when sampling the bitmap in the y-direction.
      *  @return     Returns a new shader object. Note: this function never returns null.
     */
-    static SkShader* CreatePictureShader(SkPicture* src, TileMode tmx, TileMode tmy);
+    static SkShader* CreatePictureShader(SkPicture* src, TileMode tmx, TileMode tmy,
+                                         const SkMatrix* localMatrix = NULL);
 
     SK_TO_STRING_VIRT()
     SK_DEFINE_FLATTENABLE_TYPE(SkShader)
 
 protected:
-
     SkShader(SkReadBuffer& );
     virtual void flatten(SkWriteBuffer&) const SK_OVERRIDE;
 
-private:
-    SkMatrix            fLocalMatrix;
+    bool computeTotalInverse(const ContextRec&, SkMatrix* totalInverse) const;
 
-    bool computeTotalInverse(const SkMatrix& matrix, SkMatrix* totalInverse) const;
+    /**
+     *  Your subclass must also override contextSize() if it overrides onCreateContext().
+     *  Base class impl returns NULL.
+     */
+    virtual Context* onCreateContext(const ContextRec&, void* storage) const;
+
+private:
+    SkMatrix fLocalMatrix;
 
     typedef SkFlattenable INHERITED;
 };
